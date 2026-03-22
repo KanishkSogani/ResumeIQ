@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   const features = [
     {
@@ -46,34 +48,37 @@ export default function Home() {
       <nav className="fixed top-0 z-50 w-full border-b border-white/30 bg-white/80 shadow-sm shadow-indigo-500/5 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-8">
           <div className="flex items-center gap-8">
-            <span className="text-xl font-bold tracking-tighter text-slate-900">
+            <Link
+              href="/"
+              className="text-xl font-bold tracking-tighter text-slate-900 hover:text-primary transition-colors"
+            >
               ResumeIQ
-            </span>
+            </Link>
             <div className="hidden items-center gap-6 md:flex">
-              <a
-                className="border-b-2 border-indigo-600 pb-1 text-sm font-medium tracking-tight text-indigo-600"
-                href="#"
+              <Link
+                className="text-sm font-medium tracking-tight text-slate-500 transition-colors hover:text-slate-900"
+                href="/dashboard"
               >
                 Dashboard
-              </a>
-              <a
+              </Link>
+              <Link
                 className="text-sm font-medium tracking-tight text-slate-500 transition-colors hover:text-slate-900"
                 href="#"
               >
                 Resumes
-              </a>
-              <a
+              </Link>
+              <Link
                 className="text-sm font-medium tracking-tight text-slate-500 transition-colors hover:text-slate-900"
                 href="#"
               >
                 Analytics
-              </a>
-              <a
+              </Link>
+              <Link
                 className="text-sm font-medium tracking-tight text-slate-500 transition-colors hover:text-slate-900"
                 href="#"
               >
                 Templates
-              </a>
+              </Link>
             </div>
           </div>
 
