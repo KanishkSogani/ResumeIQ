@@ -109,7 +109,7 @@ export default function UploadPage() {
           </Link>
           <Link
             className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="#"
+            href="/dashboard"
           >
             History
           </Link>
@@ -382,10 +382,13 @@ export default function UploadPage() {
               </p>
             </div>
             <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
-              <button className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+              <Link
+                href="/dashboard"
+                className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+              >
                 Analyze Resume
                 <Sparkles className="w-5 h-5" />
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>
