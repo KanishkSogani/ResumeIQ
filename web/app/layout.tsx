@@ -1,21 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ResumeIQ | AI Resume Analysis",
-  description:
-    "Analyze resumes with AI precision using ATS scoring, skill gap insights, and job match intelligence.",
+  title: "ResumeIQ",
+  description: "AI-powered resume analysis and comparison tool",
 };
 
 export default function RootLayout({
@@ -24,11 +15,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className="dark">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1"
+        />
+      </head>
+      <body
+        className={`${inter.className} bg-[#0b1326] text-[#dae2fd] antialiased`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

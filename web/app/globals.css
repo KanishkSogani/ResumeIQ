@@ -1,52 +1,40 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --color-background: #f7f9fb;
-  --color-foreground: #191c1e;
-  --color-surface: #f7f9fb;
-  --color-on-surface: #191c1e;
-  --color-on-surface-variant: #464555;
-  --color-primary: #3525cd;
-  --color-primary-container: #4f46e5;
-  --color-outline-variant: #c7c4d8;
-  --font-sans: var(--font-geist-sans), "Inter", Arial, Helvetica, sans-serif;
-  --font-mono:
-    var(--font-geist-mono), "SFMono-Regular", Consolas, "Liberation Mono",
-    monospace;
+  --color-surface: #0b1326;
+  --color-on-surface: #dae2fd;
+  --color-primary: #adc6ff;
+  --color-secondary: #b1c6f9;
 }
 
-:root {
-  color-scheme: light;
+@layer base {
+  body {
+    @apply bg-surface text-on-surface antialiased;
+  }
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+.glass-card {
+  background: rgba(45, 52, 73, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.material-symbols-outlined {
-  font-family: "Material Symbols Outlined";
-  font-variation-settings:
-    "FILL" 0,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
-  display: inline-block;
-  line-height: 1;
+.primary-gradient {
+  background: linear-gradient(135deg, #adc6ff 0%, #4d8eff 100%);
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.text-gradient {
+  background: linear-gradient(180deg, #dae2fd 0%, #7499ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #eceef0;
-  border-radius: 10px;
+.grid-bg {
+  background-image: radial-gradient(
+    circle at 2px 2px,
+    rgba(173, 198, 255, 0.05) 1px,
+    transparent 0
+  );
+  background-size: 40px 40px;
 }
