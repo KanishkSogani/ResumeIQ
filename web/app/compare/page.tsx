@@ -1,540 +1,406 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "motion/react";
 import {
-  History as HistoryIcon,
-  FileText,
-  CheckCircle2,
-  Circle,
-  Maximize2,
-  ArrowRight,
-  Sparkles,
-  Columns2,
-  Search,
+  Bell,
+  Settings,
+  BarChart3,
+  Zap,
+  Target,
+  Scale,
+  BrainCircuit,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
-const HISTORY_SELECTOR = [
+const MODELS = [
   {
-    id: "1",
-    filename: "Software_Engineer_V2.pdf",
-    date: "Oct 24, 2024",
-    selected: true,
+    name: "TF-IDF + Random Forest",
+    role: "Full-Stack Developer",
+    confidence: 74,
+    latency: "12ms",
+    featured: false,
   },
   {
-    id: "2",
-    filename: "Product_Manager_Draft.pdf",
-    date: "Oct 22, 2024",
-    selected: false,
+    name: "Doc2Vec",
+    role: "Web Engineer",
+    confidence: 68,
+    latency: "34ms",
+    featured: false,
   },
   {
-    id: "3",
-    filename: "Fullstack_Dev_Final.pdf",
-    date: "Oct 20, 2024",
-    selected: true,
+    name: "CNN",
+    role: "Senior Full-Stack",
+    confidence: 89,
+    latency: "45ms",
+    featured: false,
+  },
+  {
+    name: "Sentence-BERT",
+    role: "Senior Full-Stack",
+    confidence: 91,
+    latency: "110ms",
+    featured: false,
+  },
+  {
+    name: "Fine-tuned BERT",
+    role: "Senior Full-Stack Developer",
+    confidence: 94.2,
+    latency: "185ms",
+    featured: true,
+    label: "Champion Model",
   },
 ];
 
-const CANDIDATE_A = {
-  name: "Software_Engineer_V2",
-  focus: "Primary Focus",
-  score: 88,
-  role: "Senior Full-Stack Developer",
-  structure: 92,
-  keywords: 74,
-  skills: ["React.js", "Node.js", "TypeScript", "AWS", "Docker"],
-  missing: [
-    { name: "Kubernetes", impact: "High Impact" },
-    { name: "CI/CD Pipelines", impact: "Moderate" },
-  ],
-  preview: "https://picsum.photos/seed/resume1/800/1000",
-};
-
-const CANDIDATE_B = {
-  name: "Fullstack_Dev_Final",
-  focus: "Challenger",
-  score: 76,
-  role: "Mid-Level Software Engineer",
-  structure: 81,
-  keywords: 89,
-  skills: ["JavaScript", "SQL", "Python", "React", "Git"],
-  missing: [
-    { name: "Cloud Architecture", impact: "High Impact" },
-    { name: "Microservices", impact: "High Impact" },
-  ],
-  preview: "https://picsum.photos/seed/resume2/800/1000",
-};
+const CHART_DATA = [
+  { label: "TF-IDF", value: 74 },
+  { label: "Doc2Vec", value: 68 },
+  { label: "CNN", value: 89 },
+  { label: "S-BERT", value: 91 },
+  { label: "BERT", value: 94.2, highlight: true },
+];
 
 export default function ComparePage() {
-  const [selectedIds, setSelectedIds] = useState<string[]>(["1", "3"]);
-
-  const toggleSelection = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((i) => i !== id)
-        : [...prev, id].slice(0, 2),
-    );
-  };
-
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b1326]">
+    <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
       {/* TopNavBar */}
-      <nav className="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]/80 backdrop-blur-md border-b border-[#424754]/10">
+      <nav className="fixed top-0 w-full z-50 bg-[#0b1326]/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-[0px_24px_48px_rgba(0,0,0,0.4)] border-b border-[#424754]/10">
         <Link
           href="/"
-          className="text-xl font-black tracking-tighter text-[#adc6ff]"
+          className="text-2xl font-black tracking-tighter text-[#adc6ff]"
         >
           ResumeIQ
         </Link>
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center gap-8">
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/"
+            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
+            href="/dashboard"
           >
-            Home
+            Dashboard
           </Link>
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
+            className="text-[#adc6ff] border-b-2 border-[#adc6ff] pb-1 font-bold"
+            href="/compare"
+          >
+            Analysis
+          </Link>
+          <Link
+            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
             href="/upload"
           >
-            Upload
+            Models
           </Link>
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
+            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
             href="/history"
           >
             History
           </Link>
-          <Link
-            className="text-[#adc6ff] font-bold border-b-2 border-[#adc6ff] pb-1 antialiased text-md leading-relaxed transition-all"
-            href="/compare"
-          >
-            Compare
-          </Link>
         </div>
-        <div className="flex items-center space-x-4">
-          <button className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-all text-sm font-medium">
-            Sign In
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <Bell className="text-[#adc6ff] cursor-pointer hover:bg-[#222a3d] p-2 rounded-full transition-all w-9 h-9" />
+            <Settings className="text-[#adc6ff] cursor-pointer hover:bg-[#222a3d] p-2 rounded-full transition-all w-9 h-9" />
+          </div>
+          <button className="primary-gradient text-[#00285d] px-5 py-2 rounded-lg font-bold active:scale-95 transition-transform">
+            Upgrade
           </button>
-          <Link
-            href="/upload"
-            className="primary-gradient text-[#00285d] px-6 py-2 rounded-lg font-bold scale-95 active:opacity-80 transition-all"
-          >
-            Analyze Resume
-          </Link>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-8 py-12 w-full flex-grow">
-        {/* Selection Header */}
-        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <span className="text-[#adc6ff] tracking-widest text-xs font-bold uppercase mb-2 block">
-              AI Analysis Environment
-            </span>
-            <h1 className="text-5xl font-extrabold tracking-tighter text-[#dae2fd] leading-none">
-              Side-by-Side Comparison
-            </h1>
-          </div>
-          <div className="flex gap-3">
-            <div className="bg-[#131b2e] p-4 rounded-xl flex items-center gap-4 border-b-2 border-[#adc6ff]">
-              <HistoryIcon className="text-[#adc6ff] w-6 h-6" />
-              <div className="pr-8">
-                <p className="text-[10px] uppercase tracking-widest text-[#8c909f]">
-                  Active Comparison
-                </p>
-                <p className="text-sm font-semibold text-[#dae2fd]">
-                  {selectedIds.length} Selected Documents
-                </p>
-              </div>
+      <main className="pt-32 pb-20 px-8 max-w-7xl mx-auto w-full flex-grow">
+        {/* Header Section */}
+        <header className="flex flex-col items-center text-center mb-20">
+          <motion.span
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="uppercase tracking-[0.2em] text-[#adc6ff] mb-4 text-xs font-bold"
+          >
+            Model Architecture Comparison
+          </motion.span>
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-[#dae2fd]"
+          >
+            Jordan_Dev_Resume_2024.pdf
+          </motion.h1>
+
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="relative inline-flex flex-col items-center justify-center p-8 rounded-full bg-[#131b2e] border border-[#424754]/15"
+          >
+            <div className="text-6xl font-black tracking-tighter text-[#adc6ff] [text-shadow:0_0_15px_rgba(173,198,255,0.3)]">
+              88
             </div>
-          </div>
-        </div>
-
-        {/* Comparative Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Panel: Selector */}
-          <aside className="lg:col-span-3 space-y-6">
-            <div className="bg-[#131b2e] rounded-xl p-6 border border-[#424754]/10">
-              <h3 className="text-xs font-bold tracking-wider uppercase mb-6 text-[#c2c6d6]">
-                Select History
-              </h3>
-              <div className="space-y-4">
-                {HISTORY_SELECTOR.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => toggleSelection(item.id)}
-                      className={`p-4 rounded-lg cursor-pointer transition-all border ${
-                        isSelected
-                          ? "bg-[#222a3d] border-[#adc6ff] ring-1 ring-[#adc6ff]"
-                          : "bg-[#171f33] border-transparent hover:bg-[#222a3d]"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <FileText
-                          className={`w-5 h-5 ${isSelected ? "text-[#adc6ff]" : "text-[#8c909f]"}`}
-                        />
-                        {isSelected ? (
-                          <CheckCircle2 className="text-[#adc6ff] w-4 h-4" />
-                        ) : (
-                          <Circle className="text-[#8c909f] w-4 h-4" />
-                        )}
-                      </div>
-                      <p
-                        className={`text-sm font-bold leading-tight ${isSelected ? "text-[#dae2fd]" : "text-[#c2c6d6]"}`}
-                      >
-                        {item.filename}
-                      </p>
-                      <p className="text-[10px] text-[#8c909f] mt-1">
-                        Uploaded: {item.date}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="text-sm tracking-widest uppercase text-[#c2c6d6] mt-2 font-bold">
+              ATS Score
             </div>
-
-            {/* Curation Tip */}
-            <div className="bg-[#adc6ff]/5 p-6 rounded-xl border border-[#adc6ff]/20">
-              <p className="text-xs text-[#adc6ff] font-bold mb-2 flex items-center gap-2">
-                <Sparkles className="w-3 h-3" />
-                Curation Tip
-              </p>
-              <p className="text-xs text-[#c2c6d6] leading-relaxed opacity-80">
-                Comparing versions of the same role helps identify which keyword
-                optimizations improved your ATS score the most.
-              </p>
+            <div className="absolute -bottom-12 w-64 text-[10px] text-[#c2c6d6] leading-relaxed italic opacity-60">
+              ATS score remains constant across all models as the resume is the
+              same.
             </div>
-          </aside>
+          </motion.div>
+        </header>
 
-          {/* Right Panel: The Grid */}
-          <div className="lg:col-span-9">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Candidate A */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-8"
-              >
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 primary-gradient rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-                  <div className="relative bg-[#131b2e] p-8 rounded-xl border border-[#424754]/10">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-lg primary-gradient flex items-center justify-center">
-                        <span className="text-[#00285d] font-black">A</span>
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-[#dae2fd]">
-                          {CANDIDATE_A.name}
-                        </h2>
-                        <p className="text-xs text-[#adc6ff] font-medium">
-                          {CANDIDATE_A.focus}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Metric Hero */}
-                    <div className="mb-8">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c909f] mb-1">
-                        ATS Score
-                      </p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-black tracking-tighter text-[#adc6ff]">
-                          {CANDIDATE_A.score}
-                        </span>
-                        <span className="text-lg font-bold text-[#8c909f]">
-                          /100
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#222a3d] rounded-full mt-4 overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${CANDIDATE_A.score}%` }}
-                          transition={{ duration: 1, delay: 0.5 }}
-                          className="h-full primary-gradient"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Roles and Details */}
-                    <div className="space-y-6">
-                      <div className="p-4 bg-[#060e20] rounded-lg border-l-4 border-[#adc6ff]">
-                        <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                          Predicted Role
-                        </p>
-                        <p className="text-sm font-bold text-[#dae2fd]">
-                          {CANDIDATE_A.role}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-[#171f33] p-4 rounded-lg border border-[#424754]/5">
-                          <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                            Structure
-                          </p>
-                          <p className="text-xl font-bold text-[#dae2fd]">
-                            {CANDIDATE_A.structure}%
-                          </p>
-                        </div>
-                        <div className="bg-[#171f33] p-4 rounded-lg border border-[#424754]/5">
-                          <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                            Keywords
-                          </p>
-                          <p className="text-xl font-bold text-[#dae2fd]">
-                            {CANDIDATE_A.keywords}%
-                          </p>
-                        </div>
-                      </div>
-                      {/* Skills Section */}
-                      <div>
-                        <p className="text-[10px] uppercase text-[#8c909f] mb-3 font-bold tracking-widest">
-                          Top Identified Skills
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {CANDIDATE_A.skills.map((skill, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 bg-[#222a3d] rounded text-[11px] font-medium text-[#c2c6d6] border border-[#424754]/10"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Candidate B */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-8"
-              >
-                <div className="bg-[#131b2e] p-8 rounded-xl border border-[#424754]/10">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-lg bg-[#222a3d] flex items-center justify-center border border-[#424754]/20">
-                      <span className="text-[#dae2fd] font-black">B</span>
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-[#dae2fd]">
-                        {CANDIDATE_B.name}
-                      </h2>
-                      <p className="text-xs text-[#8c909f] font-medium">
-                        {CANDIDATE_B.focus}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Metric Hero */}
-                  <div className="mb-8 opacity-90">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c909f] mb-1">
-                      ATS Score
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black tracking-tighter text-[#dae2fd]">
-                        {CANDIDATE_B.score}
-                      </span>
-                      <span className="text-lg font-bold text-[#8c909f]">
-                        /100
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#222a3d] rounded-full mt-4 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${CANDIDATE_B.score}%` }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                        className="h-full bg-[#8c909f]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Roles and Details */}
-                  <div className="space-y-6">
-                    <div className="p-4 bg-[#060e20] rounded-lg border-l-4 border-[#424754]">
-                      <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                        Predicted Role
-                      </p>
-                      <p className="text-sm font-bold text-[#dae2fd]">
-                        {CANDIDATE_B.role}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-[#171f33] p-4 rounded-lg border border-[#424754]/5">
-                        <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                          Structure
-                        </p>
-                        <p className="text-xl font-bold text-[#dae2fd]">
-                          {CANDIDATE_B.structure}%
-                        </p>
-                      </div>
-                      <div className="bg-[#171f33] p-4 rounded-lg border border-[#424754]/5">
-                        <p className="text-[10px] uppercase text-[#8c909f] mb-1">
-                          Keywords
-                        </p>
-                        <p className="text-xl font-bold text-[#ffb786]">
-                          {CANDIDATE_B.keywords}%
-                        </p>
-                      </div>
-                    </div>
-                    {/* Skills Section */}
-                    <div>
-                      <p className="text-[10px] uppercase text-[#8c909f] mb-3 font-bold tracking-widest">
-                        Top Identified Skills
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {CANDIDATE_B.skills.map((skill, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-[#222a3d] rounded text-[11px] font-medium text-[#c2c6d6] border border-[#424754]/10"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Deep Insights: Missing Keywords Comparison */}
+        {/* Model Comparison Grid */}
+        <section className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-24">
+          {MODELS.map((model, idx) => (
             <motion.div
+              key={idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mt-12 bg-[#131b2e] rounded-xl p-8 border border-[#424754]/10"
+              transition={{ delay: 0.3 + idx * 0.1 }}
+              className={`p-6 rounded-xl flex flex-col justify-between transition-all relative ${
+                model.featured
+                  ? "bg-[#4d8eff]/10 ring-2 ring-[#adc6ff] shadow-[0_0_30px_rgba(77,142,255,0.2)]"
+                  : "bg-[#131b2e] border border-[#424754]/15 hover:bg-[#171f33]"
+              }`}
             >
-              <div className="flex items-center gap-2 mb-8">
-                <Sparkles className="text-[#ffb786] w-5 h-5" />
-                <h3 className="text-xl font-bold tracking-tight text-[#dae2fd]">
-                  Keyword Gap Analysis
+              {model.featured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#adc6ff] text-[#001a42] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+                  {model.label}
+                </div>
+              )}
+              <div>
+                <h3
+                  className={`font-bold text-xs mb-4 ${model.featured ? "text-[#adc6ff]" : "text-[#c2c6d6]"}`}
+                >
+                  {model.name}
                 </h3>
+                <p className="text-lg font-bold leading-tight mb-6 text-[#dae2fd]">
+                  {model.role}
+                </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {/* Column A */}
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-[#8c909f] uppercase tracking-wider">
-                    Critical Missing Keywords (A)
-                  </p>
-                  <div className="space-y-2">
-                    {CANDIDATE_A.missing.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-3 bg-[#ffb786]/5 rounded-lg border border-[#ffb786]/10"
-                      >
-                        <span className="text-sm font-medium text-[#dae2fd]">
-                          {item.name}
-                        </span>
-                        <span
-                          className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold ${
-                            item.impact === "High Impact"
-                              ? "bg-[#ffb786] text-[#461f00]"
-                              : "text-[#8c909f]"
-                          }`}
-                        >
-                          {item.impact}
-                        </span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <span
+                    className={`text-[10px] uppercase tracking-wider ${model.featured ? "text-[#adc6ff]/80" : "text-[#c2c6d6]"}`}
+                  >
+                    Confidence
+                  </span>
+                  <span
+                    className={`font-black ${model.featured ? "text-2xl text-[#adc6ff]" : "text-primary text-[#adc6ff]"}`}
+                  >
+                    {model.confidence}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-end">
+                  <span
+                    className={`text-[10px] uppercase tracking-wider ${model.featured ? "text-[#adc6ff]/80" : "text-[#c2c6d6]"}`}
+                  >
+                    Latency
+                  </span>
+                  <span
+                    className={`text-xs ${model.featured ? "text-[#adc6ff] font-bold" : "text-[#dae2fd]"}`}
+                  >
+                    {model.latency}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </section>
+
+        {/* Insights & Chart Bento Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Chart Section */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="lg:col-span-2 bg-[#131b2e] p-8 rounded-xl border border-[#424754]/15"
+          >
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-xl font-bold tracking-tight text-[#dae2fd]">
+                Confidence Comparison Chart
+              </h2>
+              <BarChart3 className="text-[#adc6ff] w-6 h-6" />
+            </div>
+            <div className="h-64 flex items-end gap-6 px-4 border-b border-[#424754]/20">
+              {CHART_DATA.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex-1 flex flex-col items-center gap-4 group"
+                >
+                  <div className="w-full relative flex flex-col justify-end h-full">
+                    <motion.div
+                      initial={{ height: 0 }}
+                      whileInView={{ height: `${item.value}%` }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 1, delay: 0.5 + idx * 0.1 }}
+                      className={`w-full rounded-t-lg transition-all duration-500 relative group ${
+                        item.highlight
+                          ? "primary-gradient shadow-[0_0_20px_rgba(173,198,255,0.3)]"
+                          : "bg-[#222a3d] hover:bg-[#adc6ff]/40"
+                      }`}
+                    >
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity text-[#dae2fd]">
+                        {item.value}%
                       </div>
-                    ))}
+                    </motion.div>
+                  </div>
+                  <span
+                    className={`text-[10px] uppercase tracking-tighter text-center leading-none h-8 flex items-center ${
+                      item.highlight
+                        ? "text-[#adc6ff] font-bold"
+                        : "text-[#c2c6d6]"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Performance Summary */}
+          <div className="flex flex-col gap-6">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="bg-[#131b2e] p-6 rounded-xl border border-[#424754]/15"
+            >
+              <h3 className="text-sm font-bold uppercase tracking-widest text-[#c2c6d6] mb-6">
+                Performance Summary
+              </h3>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#222a3d] flex items-center justify-center">
+                    <Zap className="text-[#adc6ff] w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[#c2c6d6]">
+                      Fastest Model
+                    </p>
+                    <p className="font-bold text-[#dae2fd]">
+                      TF-IDF <span className="text-[#adc6ff] ml-2">12ms</span>
+                    </p>
                   </div>
                 </div>
-                {/* Column B */}
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-[#8c909f] uppercase tracking-wider">
-                    Critical Missing Keywords (B)
-                  </p>
-                  <div className="space-y-2">
-                    {CANDIDATE_B.missing.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-3 bg-[#ffb786]/5 rounded-lg border border-[#ffb786]/10"
-                      >
-                        <span className="text-sm font-medium text-[#dae2fd]">
-                          {item.name}
-                        </span>
-                        <span className="text-[9px] bg-[#ffb786] text-[#461f00] px-2 py-0.5 rounded-full uppercase font-bold">
-                          {item.impact}
-                        </span>
-                      </div>
-                    ))}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#222a3d] flex items-center justify-center">
+                    <Target className="text-[#adc6ff] w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[#c2c6d6]">
+                      Most Accurate
+                    </p>
+                    <p className="font-bold text-[#dae2fd]">
+                      BERT <span className="text-[#adc6ff] ml-2">94.2%</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#222a3d] flex items-center justify-center">
+                    <Scale className="text-[#adc6ff] w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[#c2c6d6]">
+                      Best Trade-off
+                    </p>
+                    <p className="font-bold text-[#dae2fd]">
+                      CNN{" "}
+                      <span className="text-[#adc6ff] ml-2">89% @ 45ms</span>
+                    </p>
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Resume Preview Snapshot */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-[#060e20] rounded-xl overflow-hidden border border-[#424754]/20 group relative">
-                <div className="p-4 bg-[#131b2e] flex items-center justify-between border-b border-[#424754]/10">
-                  <span className="text-[10px] font-bold text-[#c2c6d6] uppercase tracking-wider">
-                    Document Content Preview
-                  </span>
-                  <Maximize2 className="w-3.5 h-3.5 text-[#8c909f] cursor-pointer hover:text-[#adc6ff]" />
-                </div>
-                <div className="relative h-64 w-full overflow-hidden">
-                  <Image
-                    src={CANDIDATE_A.preview}
-                    alt="Resume A Preview"
-                    fill
-                    className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 opacity-40 group-hover:opacity-60"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-[#222a3d] p-6 rounded-xl border border-[#424754]/15 border-l-4 border-[#ffb786]"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <BrainCircuit className="text-[#ffb786] w-5 h-5" />
+                <h4 className="text-sm font-bold text-[#ffb786] uppercase tracking-widest">
+                  Agreement Analysis
+                </h4>
               </div>
-              <div className="bg-[#060e20] rounded-xl overflow-hidden border border-[#424754]/20 group relative">
-                <div className="p-4 bg-[#131b2e] flex items-center justify-between border-b border-[#424754]/10">
-                  <span className="text-[10px] font-bold text-[#c2c6d6] uppercase tracking-wider">
-                    Document Content Preview
-                  </span>
-                  <Maximize2 className="w-3.5 h-3.5 text-[#8c909f] cursor-pointer hover:text-[#adc6ff]" />
-                </div>
-                <div className="relative h-64 w-full overflow-hidden">
-                  <Image
-                    src={CANDIDATE_B.preview}
-                    alt="Resume B Preview"
-                    fill
-                    className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 opacity-40 group-hover:opacity-60"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </div>
-            </div>
+              <p className="text-sm leading-relaxed text-[#dae2fd]">
+                <strong className="text-[#adc6ff]">4 out of 5</strong> models
+                predict{" "}
+                <span className="font-bold">Senior Full-Stack Developer</span>.
+                This high consensus indicates strong alignment between semantic
+                markers and keyword metrics.
+              </p>
+            </motion.div>
           </div>
         </div>
+
+        {/* Analysis & Insights Deep Dive */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-8 bg-[#131b2e] p-8 rounded-xl border border-[#424754]/15"
+        >
+          <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-[#c2c6d6] mb-6">
+            Model Insight Deep Dive
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="relative pl-6 border-l border-[#adc6ff]/20">
+              <p className="text-lg leading-relaxed text-[#c2c6d6] italic opacity-80">
+                "Traditional models like{" "}
+                <span className="text-[#dae2fd] font-semibold">TF-IDF</span>{" "}
+                rely on keyword frequency, acting as high-speed lexical
+                scanners."
+              </p>
+            </div>
+            <div className="relative pl-6 border-l border-[#adc6ff]/20">
+              <p className="text-lg leading-relaxed text-[#c2c6d6] opacity-80">
+                "In contrast, transformer-based models like{" "}
+                <span className="text-[#adc6ff] font-semibold">BERT</span> and{" "}
+                <span className="text-[#adc6ff] font-semibold">S-BERT</span>{" "}
+                understand semantic context and long-range dependencies,
+                recognizing expertise beyond mere word matches."
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center bg-[#0b1326] border-t border-[#424754]/10 mt-24">
-        <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
-          <div className="text-lg font-bold text-[#adc6ff] mb-2">ResumeIQ</div>
-          <p className="text-sm tracking-wide text-[#dae2fd] opacity-50">
-            © 2024 ResumeIQ. Professional grade AI analysis.
-          </p>
+      <footer className="bg-[#0b1326] flex flex-col md:flex-row justify-between items-center py-12 px-8 w-full gap-6 mt-10 border-t border-[#424754]/10">
+        <div className="text-lg font-bold text-[#dae2fd]">
+          ResumeIQ Intelligence
         </div>
-        <div className="flex gap-8">
+        <div className="flex flex-wrap justify-center gap-8">
           <a
-            className="text-sm tracking-wide text-[#dae2fd] opacity-50 hover:opacity-100 transition-opacity underline-offset-4 hover:underline"
+            className="text-[#dae2fd]/40 hover:text-[#adc6ff] transition-colors text-sm"
             href="#"
           >
             Privacy Policy
           </a>
           <a
-            className="text-sm tracking-wide text-[#dae2fd] opacity-50 hover:opacity-100 transition-opacity underline-offset-4 hover:underline"
+            className="text-[#dae2fd]/40 hover:text-[#adc6ff] transition-colors text-sm"
             href="#"
           >
             Terms of Service
           </a>
           <a
-            className="text-sm tracking-wide text-[#dae2fd] opacity-50 hover:opacity-100 transition-opacity underline-offset-4 hover:underline"
+            className="text-[#dae2fd]/40 hover:text-[#adc6ff] transition-colors text-sm"
             href="#"
           >
-            API Documentation
+            AI Ethics
           </a>
+          <a
+            className="text-[#dae2fd]/40 hover:text-[#adc6ff] transition-colors text-sm"
+            href="#"
+          >
+            Documentation
+          </a>
+        </div>
+        <div className="text-[#dae2fd]/40 text-sm leading-relaxed">
+          © 2024 ResumeIQ Intelligence. The Digital Curator Framework.
         </div>
       </footer>
     </div>
