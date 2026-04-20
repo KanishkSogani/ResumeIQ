@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { ChangeEvent, useRef, useState } from "react";
+import { motion } from "motion/react";
 import {
   UploadCloud,
   FileText,
@@ -13,17 +13,13 @@ import {
   Brain,
   GitBranch,
   CheckCircle2,
-  PlusCircle,
-  X,
   Sparkles,
-  FileType,
-  Plus,
 } from "lucide-react";
 import Link from "next/link";
 
 const STEPS = [
   { id: 1, label: "Document Load", sub: "Step 01", active: true },
-  { id: 2, label: "Model Calibration", sub: "Step 02", active: false },
+  { id: 2, label: "Model Selection", sub: "Step 02", active: false },
   { id: 3, label: "Final Results", sub: "Step 03", active: false },
 ];
 
@@ -61,26 +57,40 @@ const ENGINES = [
 ];
 
 export default function UploadPage() {
-  const [selectedEngines, setSelectedEngines] = useState<string[]>([
-    "tfidf",
-    "sbert",
-  ]);
-  const [files, setFiles] = useState([
-    {
-      name: "Senior_Software_Engineer_2024.pdf",
-      size: "2.4 MB",
-      status: "Uploaded",
-    },
-  ]);
+  const [selectedEngine, setSelectedEngine] = useState<string>("tfidf");
+  const [file, setFile] = useState<{
+    name: string;
+    size: string;
+    status: string;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleEngine = (id: string) => {
-    setSelectedEngines((prev) =>
-      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id],
-    );
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    return `${(kb / 1024).toFixed(1)} MB`;
   };
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+  const handleFileSelection = (selectedFile: File | null) => {
+    if (!selectedFile) return;
+
+    setFile({
+      name: selectedFile.name,
+      size: formatFileSize(selectedFile.size),
+      status: "Ready",
+    });
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    handleFileSelection(event.target.files?.[0] ?? null);
+  };
+
+  const removeFile = () => {
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -200,7 +210,17 @@ export default function UploadPage() {
                     <FileText className="text-[#adc6ff] w-6 h-6" />
                   </div>
 
-                  <div className="border-2 border-dashed border-[#424754] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-[#adc6ff] transition-colors cursor-pointer bg-[#131b2e] flex-grow">
+                  <div
+                    className="border-2 border-dashed border-[#424754] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-[#adc6ff] transition-colors cursor-pointer bg-[#131b2e] flex-grow"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={handleInputChange}
+                    />
                     <UploadCloud className="w-12 h-12 text-[#4d8eff] mb-4" />
                     <p className="text-[#dae2fd] font-medium mb-1">
                       Drag & drop your resume
@@ -208,7 +228,10 @@ export default function UploadPage() {
                     <p className="text-sm text-[#c2c6d6] mb-6 opacity-60">
                       Supports PDF, DOCX (Max 10MB)
                     </p>
-                    <button className="bg-[#222a3d] text-[#adc6ff] px-6 py-2 rounded-lg text-sm font-bold border border-[#424754] hover:border-[#adc6ff] transition-all">
+                    <button
+                      type="button"
+                      className="bg-[#222a3d] text-[#adc6ff] px-6 py-2 rounded-lg text-sm font-bold border border-[#424754] hover:border-[#adc6ff] transition-all"
+                    >
                       Browse Files
                     </button>
                   </div>
@@ -220,14 +243,14 @@ export default function UploadPage() {
                     </div>
                     <div className="flex-grow overflow-hidden text-left">
                       <p className="text-sm font-semibold truncate">
-                        {files[0]?.name || "No file selected"}
+                        {file?.name || "No file selected"}
                       </p>
                       <p className="text-xs text-[#c2c6d6] opacity-60">
-                        {files[0]?.size || ""} • {files[0]?.status || ""}
+                        {file ? `${file.size} • ${file.status}` : ""}
                       </p>
                     </div>
                     <button
-                      onClick={() => removeFile(0)}
+                      onClick={removeFile}
                       className="text-[#ffb4ab] opacity-70 hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -246,17 +269,17 @@ export default function UploadPage() {
                     <BrainCircuit className="text-[#adc6ff] w-6 h-6" />
                   </div>
                   <p className="text-sm text-[#c2c6d6] mb-6 leading-relaxed opacity-70 text-left">
-                    Select neural architectures for initial feature extraction
+                    Select one model architecture for initial feature extraction
                     and semantic parsing.
                   </p>
 
                   <div className="space-y-3 mb-8 flex-grow">
                     {ENGINES.map((engine) => {
-                      const isSelected = selectedEngines.includes(engine.id);
+                      const isSelected = selectedEngine === engine.id;
                       return (
                         <button
                           key={engine.id}
-                          onClick={() => toggleEngine(engine.id)}
+                          onClick={() => setSelectedEngine(engine.id)}
                           className={`w-full flex items-center justify-between p-4 rounded-xl transition-all border ${
                             isSelected
                               ? "bg-[#222a3d] border-[#adc6ff] shadow-lg"
@@ -274,34 +297,11 @@ export default function UploadPage() {
                           {isSelected ? (
                             <CheckCircle2 className="w-5 h-5 text-[#adc6ff]" />
                           ) : (
-                            <Plus className="w-5 h-5 text-[#8c909f]" />
+                            <div className="w-5 h-5 rounded-full border border-[#8c909f]" />
                           )}
                         </button>
                       );
                     })}
-                  </div>
-
-                  <div className="pt-6 border-t border-[#424754]/20">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#c2c6d6] mb-4 text-left">
-                      Selected Architectures
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedEngines.map((id) => {
-                        const engine = ENGINES.find((e) => e.id === id);
-                        return (
-                          <span
-                            key={id}
-                            className="bg-[#2d3449] text-[#adc6ff] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 border border-[#adc6ff]/20"
-                          >
-                            {engine?.name.split(" ")[0]}
-                            <X
-                              className="w-3 h-3 cursor-pointer hover:text-white"
-                              onClick={() => toggleEngine(id)}
-                            />
-                          </span>
-                        );
-                      })}
-                    </div>
                   </div>
                 </section>
               </div>
