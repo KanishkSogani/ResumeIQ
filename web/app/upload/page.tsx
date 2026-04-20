@@ -16,7 +16,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TopNavBar } from "@/components/LandingPage/TopNavBar";
+import { API_BASE_URL } from "@/lib/api";
 
 const STEPS = [
   { id: 1, label: "Document Load", sub: "Step 01", active: true },
@@ -58,12 +60,16 @@ const ENGINES = [
 ];
 
 export default function UploadPage() {
+  const router = useRouter();
   const [selectedEngine, setSelectedEngine] = useState<string>("tfidf");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [file, setFile] = useState<{
     name: string;
     size: string;
     status: string;
   } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes: number) => {
@@ -75,6 +81,9 @@ export default function UploadPage() {
 
   const handleFileSelection = (selectedFile: File | null) => {
     if (!selectedFile) return;
+
+    setSelectedFile(selectedFile);
+    setUploadError(null);
 
     setFile({
       name: selectedFile.name,
@@ -88,9 +97,64 @@ export default function UploadPage() {
   };
 
   const removeFile = () => {
+    setSelectedFile(null);
     setFile(null);
+    setUploadError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAnalyzeResume = async () => {
+    if (!selectedFile) {
+      setUploadError("Please select a resume PDF before analyzing.");
+      return;
+    }
+
+    if (!selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      setUploadError("Only PDF files are supported by the backend right now.");
+      return;
+    }
+
+    if (!API_BASE_URL) {
+      setUploadError(
+        "Missing API URL. Set NEXT_PUBLIC_API_BASE_URL in web/.env.local.",
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setUploadError(null);
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(`${API_BASE_URL}/analyze-full`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.detail || "Failed to analyze resume.";
+        throw new Error(message);
+      }
+
+      const report = await response.json();
+      if (!report?.report_id) {
+        throw new Error("Invalid response from server. Missing report ID.");
+      }
+
+      router.push(
+        `/dashboard?reportId=${encodeURIComponent(report.report_id)}`,
+      );
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Unexpected upload error.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -176,7 +240,7 @@ export default function UploadPage() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      accept=".pdf,application/pdf"
                       className="hidden"
                       onChange={handleInputChange}
                     />
@@ -185,7 +249,7 @@ export default function UploadPage() {
                       Drag & drop your resume
                     </p>
                     <p className="text-sm text-[#c2c6d6] mb-6 opacity-60">
-                      Supports PDF, DOCX (Max 10MB)
+                      Supports PDF (Max 10MB)
                     </p>
                     <button
                       type="button"
@@ -277,15 +341,22 @@ export default function UploadPage() {
               </p>
             </div>
             <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
-              <Link
-                href="/dashboard"
+              <button
+                type="button"
+                onClick={handleAnalyzeResume}
+                disabled={isSubmitting}
                 className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
               >
-                Analyze Resume
+                {isSubmitting ? "Analyzing..." : "Analyze Resume"}
                 <Sparkles className="w-6 h-6" />
-              </Link>
+              </button>
             </div>
           </div>
+          {uploadError && (
+            <p className="mt-4 text-sm text-[#ffb4ab] text-left">
+              {uploadError}
+            </p>
+          )}
         </div>
       </main>
 
