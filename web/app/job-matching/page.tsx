@@ -1,74 +1,203 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import {
-  FileText,
   CheckCircle2,
   AlertTriangle,
-  Zap,
   Sparkles,
-  Trash2,
-  FolderOpen,
-  Edit3,
   TrendingUp,
-  ArrowRight,
   Download,
-  Brain,
-  Target,
-  Verified,
-  Plus,
-  Bell,
-  Settings,
   Wand2,
 } from "lucide-react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { TopNavBar } from "@/components/LandingPage/TopNavBar";
+import { API_BASE_URL } from "@/lib/api";
+
+type MatchResult = {
+  match_score: number;
+  semantic_similarity: number;
+  keyword_match: number;
+  matched_skills: string[];
+  missing_skills: string[];
+};
+
+type FeedbackResult = {
+  feedback?: unknown;
+  message?: unknown;
+  result?: unknown;
+};
+
+const normalizeInputToString = (input: unknown): string => {
+  if (typeof input === "string") return input;
+  if (input === null || input === undefined) return "";
+
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return String(input);
+  }
+};
+
+const normalizeFeedbackToString = (
+  payload: FeedbackResult | unknown,
+): string => {
+  if (typeof payload === "string") return payload;
+
+  if (payload && typeof payload === "object") {
+    const data = payload as FeedbackResult;
+    const candidates = [data.feedback, data.message, data.result];
+
+    for (const candidate of candidates) {
+      const normalized = normalizeInputToString(candidate).trim();
+      if (normalized) return normalized;
+    }
+  }
+
+  return normalizeInputToString(payload).trim();
+};
 
 export default function JobMatchingPage() {
-  const matchedCompetencies = [
-    "Python & PyTorch",
-    "Transformers",
-    "NLP Pipeline",
-    "Data Visualization",
-    "BERT/GPT",
-  ];
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get("resumeId");
 
-  const missingSkills = [
-    "Docker & Kubernetes",
-    "AWS SageMaker",
-    "C++ (Edge Ops)",
-  ];
+  const [jdText, setJdText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const hasAutoAnalyzed = useRef(false);
 
-  const actionableGrowth = [
-    {
-      type: "CRITICAL",
-      title: "Add Docker Experience",
-      desc: 'Explicitly mention "Dockerized ML microservices" in your Experience section.',
-      icon: CheckCircle2,
-      color: "text-[#ffb786] bg-[#df7412]/20",
-    },
-    {
-      type: "PROJECT",
-      title: "Include MLOps Projects",
-      desc: 'Draft a project entry for "Kubernetes-orchestrated LLM inferencing system."',
-      icon: FolderOpen,
-      color: "text-[#adc6ff] bg-[#adc6ff]/20",
-    },
-    {
-      type: "CONTENT",
-      title: "Quantify Impact",
-      desc: "Mention % reduction in latency for your Transformer models.",
-      icon: Edit3,
-      color: "text-[#adc6ff] bg-[#adc6ff]/20",
-    },
-  ];
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const draft = window.sessionStorage.getItem(
+      "resumeiq_job_description_draft",
+    );
+    if (draft !== null) {
+      setJdText(normalizeInputToString(draft));
+    }
+
+    setIsBootstrapping(false);
+  }, []);
+
+  const score = Math.max(0, Math.min(100, matchResult?.match_score ?? 0));
+
+  const actionableGrowth = useMemo(() => {
+    if (!matchResult?.missing_skills?.length) return [];
+
+    return matchResult.missing_skills.slice(0, 3).map((skill, index) => ({
+      type: index === 0 ? "CRITICAL" : "ACTION",
+      title: `Add ${skill}`,
+      desc: `Include concrete project/experience evidence for ${skill} in your resume.`,
+      color:
+        index === 0
+          ? "text-[#ffb786] bg-[#df7412]/20"
+          : "text-[#adc6ff] bg-[#adc6ff]/20",
+    }));
+  }, [matchResult]);
+
+  const feedbackParagraphs = useMemo(() => {
+    if (!feedback) return [];
+    return feedback
+      .split(/\n\n+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }, [feedback]);
+
+  const handleAnalyze = async () => {
+    const normalizedJdText = normalizeInputToString(jdText);
+
+    if (!resumeId) {
+      setError(
+        "Missing resume ID. Start from upload and open job matching from dashboard.",
+      );
+      return;
+    }
+
+    if (!normalizedJdText.trim()) {
+      setError("Paste a job description before running analysis.");
+      return;
+    }
+
+    if (!API_BASE_URL) {
+      setError(
+        "Missing API URL. Set NEXT_PUBLIC_API_BASE_URL in web/.env.local.",
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const matchResponse = await fetch(`${API_BASE_URL}/match/job`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resume_id: resumeId,
+          jd_text: normalizedJdText,
+        }),
+      });
+
+      if (!matchResponse.ok) {
+        const errorData = await matchResponse.json().catch(() => null);
+        throw new Error(errorData?.detail || "Failed to run job matching.");
+      }
+
+      const matchData: MatchResult = await matchResponse.json();
+      setMatchResult(matchData);
+
+      const feedbackResponse = await fetch(`${API_BASE_URL}/ai/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resume_id: resumeId,
+          jd_text: normalizedJdText,
+          missing_skills: matchData.missing_skills,
+          matched_skills: matchData.matched_skills,
+        }),
+      });
+
+      if (feedbackResponse.ok) {
+        const feedbackData: FeedbackResult = await feedbackResponse.json();
+        const normalizedFeedback = normalizeFeedbackToString(feedbackData);
+        setFeedback(normalizedFeedback || null);
+      } else {
+        setFeedback(null);
+      }
+    } catch (analysisError) {
+      setError(
+        analysisError instanceof Error
+          ? analysisError.message
+          : "Unable to run job matching.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isBootstrapping || isSubmitting || hasAutoAnalyzed.current) return;
+    if (!resumeId) return;
+
+    const normalizedJdText = normalizeInputToString(jdText).trim();
+    if (!normalizedJdText) return;
+
+    hasAutoAnalyzed.current = true;
+    handleAnalyze();
+  }, [isBootstrapping, isSubmitting, jdText, resumeId]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
       <TopNavBar />
 
       <main className="pt-12 pb-20 px-8 max-w-[1440px] mx-auto w-full">
-        {/* Header Section */}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <motion.span
@@ -86,60 +215,65 @@ export default function JobMatchingPage() {
             >
               JD-Enhanced Insights
             </motion.h1>
+            <p className="mt-3 text-[#c2c6d6] text-sm opacity-80">
+              Resume ID: {resumeId || "Unavailable"}
+            </p>
           </div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex gap-4"
-          >
-            <button className="bg-[#222a3d] text-[#adc6ff] px-6 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-[#2d3449] transition-colors border border-[#424754]/30">
+          <div className="flex gap-4">
+            <button className="bg-[#222a3d] text-[#adc6ff] px-6 py-3 rounded-lg font-bold flex items-center gap-2 border border-[#424754]/30 cursor-not-allowed opacity-60">
               <Download className="w-5 h-5" /> Export PDF
             </button>
-          </motion.div>
+          </div>
         </header>
 
-        {/* Main 3-Column Grid */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-[#ffb4ab]/40 bg-[#2a1218] px-4 py-3 text-sm text-[#ffb4ab]">
+            {error}
+          </div>
+        )}
+
+        {isBootstrapping && (
+          <div className="mb-6 rounded-xl border border-[#adc6ff]/30 bg-[#131b2e] px-4 py-3 text-sm text-[#adc6ff]">
+            Loading job context...
+          </div>
+        )}
+
+        {!isBootstrapping && isSubmitting && (
+          <div className="mb-6 rounded-xl border border-[#adc6ff]/30 bg-[#131b2e] px-4 py-3 text-sm text-[#adc6ff]">
+            Running job match analysis...
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (Match Score & Context) */}
           <div className="lg:col-span-4 space-y-6">
-            {/* Active Job Context */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-[#131b2e] rounded-2xl p-8 border border-[#424754]/10 relative overflow-hidden group"
+              className="bg-[#131b2e] rounded-2xl p-8 border border-[#424754]/10"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold tracking-tight">
-                  Active Job Context
-                </h2>
-                <span className="bg-[#adc6ff]/10 text-[#adc6ff] px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border border-[#adc6ff]/20">
-                  Target: Senior MLE
-                </span>
-              </div>
-              <div className="bg-[#060e20] rounded-xl p-6 font-mono text-sm text-[#8c909f] leading-relaxed h-[420px] overflow-y-auto border-b-2 border-[#adc6ff]/50 custom-scrollbar">
-                <p className="mb-4">
-                  We are looking for a Senior Machine Learning Engineer to lead
-                  our NLP initiatives. The ideal candidate has deep expertise in
-                  Transformer architectures, large-scale data engineering, and
-                  deploying models with Docker and Kubernetes.
-                </p>
-                <p className="mb-1 font-bold text-[#dae2fd]">Requirements:</p>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>5+ years experience in Python/PyTorch</li>
-                  <li>Experience with LLMs and Fine-tuning</li>
-                  <li>Kubernetes & MLOps expertise</li>
-                  <li>Strong track record of shipping production-level AI</li>
-                </ul>
-              </div>
-              <button className="w-full mt-4 bg-[#171f33] text-[#8c909f] py-4 rounded-xl font-bold flex items-center justify-center gap-2 cursor-default border border-[#424754]/20 hover:text-[#adc6ff] transition-colors">
-                <CheckCircle2 className="w-5 h-5 text-[#adc6ff]" /> Context
-                Locked & Analyzed
+              <h2 className="text-xl font-bold tracking-tight mb-4">
+                Active Job Context
+              </h2>
+              <textarea
+                value={jdText}
+                onChange={(event) =>
+                  setJdText(normalizeInputToString(event.target.value))
+                }
+                className="w-full h-[260px] bg-[#060e20] rounded-xl p-4 text-sm text-[#c2c6d6] leading-relaxed border border-[#424754]/20 focus:border-[#adc6ff] focus:outline-none resize-none"
+                placeholder="Paste job description here..."
+              />
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={isSubmitting}
+                className="w-full mt-4 bg-[#adc6ff] text-[#00285d] py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-2xl shadow-[#adc6ff]/10 disabled:opacity-70"
+              >
+                <Wand2 className="w-5 h-5" />
+                {isSubmitting ? "Analyzing..." : "Analyze Job Match"}
               </button>
             </motion.div>
 
-            {/* Match Score */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -164,7 +298,9 @@ export default function JobMatchingPage() {
                     ></circle>
                     <motion.circle
                       initial={{ strokeDashoffset: 578.05 }}
-                      animate={{ strokeDashoffset: 578.05 - 578.05 * 0.75 }}
+                      animate={{
+                        strokeDashoffset: 578.05 - 578.05 * (score / 100),
+                      }}
                       transition={{ duration: 1.5, ease: "easeOut" }}
                       cx="104"
                       cy="104"
@@ -190,7 +326,7 @@ export default function JobMatchingPage() {
                   </svg>
                   <div className="absolute flex flex-col items-center">
                     <span className="text-6xl font-black tracking-tighter text-[#adc6ff] [text-shadow:0_0_15px_rgba(173,198,255,0.4)]">
-                      75%
+                      {Math.round(score)}%
                     </span>
                     <span className="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mt-2">
                       Match Score
@@ -203,7 +339,9 @@ export default function JobMatchingPage() {
                       Semantic
                     </span>
                     <span className="text-xl font-bold text-[#adc6ff]">
-                      High (8.4)
+                      {matchResult
+                        ? `${matchResult.semantic_similarity.toFixed(1)}%`
+                        : "-"}
                     </span>
                   </div>
                   <div className="bg-[#171f33] rounded-xl p-4 border border-[#424754]/10 text-center">
@@ -211,7 +349,9 @@ export default function JobMatchingPage() {
                       Keywords
                     </span>
                     <span className="text-xl font-bold text-[#ffb786]">
-                      62%
+                      {matchResult
+                        ? `${matchResult.keyword_match.toFixed(1)}%`
+                        : "-"}
                     </span>
                   </div>
                 </div>
@@ -219,9 +359,7 @@ export default function JobMatchingPage() {
             </motion.div>
           </div>
 
-          {/* Middle Column (Skill Gaps & AI Narrative) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Skill Gap Intelligence */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -234,20 +372,25 @@ export default function JobMatchingPage() {
               <div className="space-y-8">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Verified className="text-[#adc6ff] w-4 h-4" />
+                    <CheckCircle2 className="text-[#adc6ff] w-4 h-4" />
                     <span className="text-xs font-bold uppercase tracking-widest text-[#adc6ff]">
                       Matched Competencies
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {matchedCompetencies.map((skill, index) => (
+                    {(matchResult?.matched_skills || []).map((skill) => (
                       <span
-                        key={index}
+                        key={skill}
                         className="bg-[#222a3d] text-[#dae2fd] px-4 py-2 rounded-full text-sm font-medium border border-[#adc6ff]/20"
                       >
                         {skill}
                       </span>
                     ))}
+                    {!matchResult?.matched_skills?.length && (
+                      <span className="text-sm text-[#8c909f]">
+                        No match data yet.
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -258,28 +401,32 @@ export default function JobMatchingPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {missingSkills.map((skill, index) => (
+                    {(matchResult?.missing_skills || []).map((skill) => (
                       <span
-                        key={index}
+                        key={skill}
                         className="bg-[#df7412]/10 text-[#ffb786] px-4 py-2 rounded-full text-sm font-medium border border-[#df7412]/20"
                       >
                         {skill}
                       </span>
                     ))}
+                    {!matchResult?.missing_skills?.length && (
+                      <span className="text-sm text-[#8c909f]">
+                        No missing-skill data yet.
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* AI Narrative Feedback */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="bg-[#171f33] rounded-2xl p-8 border-l-4 border-[#adc6ff] shadow-2xl space-y-8"
+              className="bg-[#171f33] rounded-2xl p-8 border-l-4 border-[#adc6ff] shadow-2xl"
             >
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="bg-[#adc6ff] p-2 rounded-lg">
                   <Sparkles className="text-[#00285d] w-5 h-5" />
                 </div>
@@ -287,44 +434,25 @@ export default function JobMatchingPage() {
                   AI Narrative Feedback
                 </h3>
               </div>
-              <div className="space-y-8">
-                <div className="relative pl-6 border-l border-[#424754]/30">
-                  <span className="text-[10px] font-bold uppercase text-[#adc6ff] tracking-[0.2em] block mb-2">
-                    Core Strengths
-                  </span>
-                  <p className="text-[#c2c6d6] text-sm leading-relaxed opacity-90">
-                    Your research background in Transformers aligns perfectly
-                    with their NLP needs. The BERT implementation mentioned in
-                    your projects is a direct match.
+              <div className="space-y-4">
+                {feedbackParagraphs.map((paragraph, idx) => (
+                  <p
+                    key={idx}
+                    className="text-[#c2c6d6] text-sm leading-relaxed opacity-90"
+                  >
+                    {paragraph}
                   </p>
-                </div>
-                <div className="relative pl-6 border-l border-[#424754]/30">
-                  <span className="text-[10px] font-bold uppercase text-[#ffb786] tracking-[0.2em] block mb-2">
-                    Strategic Weaknesses
-                  </span>
-                  <p className="text-[#c2c6d6] text-sm leading-relaxed opacity-90">
-                    The JD heavily emphasizes "Production Deployment." Your
-                    resume reads more academic; there is no mention of CI/CD or
-                    containerization.
+                ))}
+                {!feedbackParagraphs.length && (
+                  <p className="text-[#8c909f] text-sm">
+                    Run analysis to fetch AI feedback from backend.
                   </p>
-                </div>
-                <div className="relative pl-6 border-l border-[#424754]/30">
-                  <span className="text-[10px] font-bold uppercase text-[#adc6ff] tracking-[0.2em] block mb-2">
-                    ATS Optimization
-                  </span>
-                  <p className="text-[#c2c6d6] text-sm leading-relaxed opacity-90">
-                    Swap "Managed data streams" for "Engineered high-throughput
-                    ETL pipelines" to better trigger their internal data
-                    engineering filters.
-                  </p>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>
 
-          {/* Right Column (Growth & Recap) */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Actionable Growth */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -335,10 +463,10 @@ export default function JobMatchingPage() {
                 Actionable Growth
               </h3>
               <div className="space-y-4">
-                {actionableGrowth.map((action, index) => (
+                {actionableGrowth.map((action) => (
                   <div
-                    key={index}
-                    className="bg-[#171f33] rounded-xl p-4 border border-[#424754]/10 group hover:border-[#adc6ff]/50 transition-all cursor-default"
+                    key={action.title}
+                    className="bg-[#171f33] rounded-xl p-4 border border-[#424754]/10"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span
@@ -346,7 +474,6 @@ export default function JobMatchingPage() {
                       >
                         {action.type}
                       </span>
-                      <action.icon className="text-[#adc6ff] w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <p className="text-sm font-bold text-[#dae2fd] mb-1">
                       {action.title}
@@ -356,10 +483,14 @@ export default function JobMatchingPage() {
                     </p>
                   </div>
                 ))}
+                {!actionableGrowth.length && (
+                  <p className="text-sm text-[#8c909f]">
+                    No actions available yet.
+                  </p>
+                )}
               </div>
             </motion.div>
 
-            {/* Stage 1 Recap */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -371,46 +502,35 @@ export default function JobMatchingPage() {
                 <TrendingUp className="w-24 h-24 stroke-[3]" />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] block mb-4">
-                Stage 1 Recap
+                Match Recap
               </span>
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[#c2c6d6]">ATS Compatibility</span>
-                  <span className="font-bold text-[#adc6ff]">82%</span>
+                  <span className="text-[#c2c6d6]">Overall Match</span>
+                  <span className="font-bold text-[#adc6ff]">
+                    {Math.round(score)}%
+                  </span>
                 </div>
                 <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#adc6ff]"
-                    style={{ width: "82%" }}
+                    style={{ width: `${score}%` }}
                   ></div>
                 </div>
                 <div className="mt-4">
                   <p className="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-1">
-                    Top Role Predicted:
+                    Resume ID:
                   </p>
-                  <p className="text-sm font-bold text-[#adc6ff]">
-                    NLP Research Engineer
+                  <p className="text-sm font-bold text-[#adc6ff] break-all">
+                    {resumeId || "Unavailable"}
                   </p>
                 </div>
               </div>
             </motion.div>
-
-            {/* Primary Action Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#adc6ff] text-[#00285d] py-5 rounded-2xl font-black text-center flex items-center justify-center gap-3 shadow-2xl shadow-[#adc6ff]/10 group transition-all"
-            >
-              <Wand2 className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              Generate JD-Optimized Resume
-            </motion.button>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center bg-[#0b1326] border-t border-[#424754]/10 mt-20">
         <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
           <div className="text-xl font-black text-[#dae2fd] mb-2 tracking-tighter">
@@ -448,29 +568,6 @@ export default function JobMatchingPage() {
           </a>
         </div>
       </footer>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #060e20;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #222a3d;
-          border-radius: 2px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #adc6ff;
-        }
-        .hero-gradient {
-          background: radial-gradient(
-            circle at 50% 50%,
-            rgba(77, 142, 255, 0.05) 0%,
-            rgba(11, 19, 38, 0) 70%
-          );
-        }
-      `}</style>
     </div>
   );
 }

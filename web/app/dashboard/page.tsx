@@ -11,12 +11,8 @@ import {
   Cpu,
   Wand2,
   Rocket,
-  Star,
-  Zap,
-  Lightbulb,
 } from "lucide-react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopNavBar } from "@/components/LandingPage/TopNavBar";
 import { API_BASE_URL } from "@/lib/api";
 
@@ -49,38 +45,24 @@ const MODEL_ICON_MAP = {
   doc2vec: Brain,
 };
 
-const INSIGHTS = [
-  {
-    type: "Golden Nugget",
-    title: "Quantify Impact",
-    desc: 'Add percentages to your "Efficiency Improvement" bullets to increase score by 12%.',
-    icon: Star,
-    color: "border-[#ffb786]",
-    iconColor: "text-[#ffb786]",
-  },
-  {
-    type: "Core Strength",
-    title: "Architecture Clarity",
-    desc: "Your systems design experience is perfectly indexed by our SBERT model.",
-    icon: Zap,
-    color: "border-[#adc6ff]",
-    iconColor: "text-[#adc6ff]",
-  },
-  {
-    type: "Career Tip",
-    title: "Keyword Focus",
-    desc: 'The market is currently valuing "Event-Driven Architecture" 15% higher this quarter.',
-    icon: Lightbulb,
-    color: "border-[#c2c6d6]/30",
-    iconColor: "text-[#c2c6d6]",
-  },
-];
+const normalizeInputToString = (input: unknown): string => {
+  if (typeof input === "string") return input;
+  if (input === null || input === undefined) return "";
+
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return String(input);
+  }
+};
 
 export default function DashboardPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const reportId = searchParams.get("reportId");
 
   const [report, setReport] = useState<ReportData | null>(null);
+  const [jobDescriptionInput, setJobDescriptionInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,6 +131,23 @@ export default function DashboardPage() {
       };
     });
   }, [report]);
+
+  const handleStartJobMatch = () => {
+    const normalizedJdText = normalizeInputToString(jobDescriptionInput);
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        "resumeiq_job_description_draft",
+        normalizedJdText,
+      );
+    }
+
+    const targetPath = reportId
+      ? `/job-matching?resumeId=${encodeURIComponent(reportId)}`
+      : "/job-matching";
+
+    router.push(targetPath);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
@@ -354,6 +353,12 @@ export default function DashboardPage() {
                 <div className="lg:col-span-8">
                   <div className="relative group">
                     <textarea
+                      value={jobDescriptionInput}
+                      onChange={(event) =>
+                        setJobDescriptionInput(
+                          normalizeInputToString(event.target.value),
+                        )
+                      }
                       className="w-full h-64 bg-[#0b1326] border border-[#222a3d] rounded-2xl p-6 text-[#dae2fd] placeholder:text-[#8c909f]/30 focus:ring-2 focus:ring-[#adc6ff]/20 focus:border-[#adc6ff]/20 transition-all resize-none font-medium text-sm leading-relaxed outline-none shadow-inner"
                       placeholder="Paste job description to analyze match and get recommendations"
                     />
@@ -388,45 +393,19 @@ export default function DashboardPage() {
                     </ul>
                   </div>
 
-                  <Link href="/job-matching">
-                    <button className="primary-gradient w-full py-5 rounded-2xl text-[#00285d] font-black tracking-widest uppercase text-xs shadow-xl shadow-[#adc6ff]/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:scale-[1.01]">
-                      <Rocket className="w-4 h-4" />
-                      Analyze Job Match
-                    </button>
-                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleStartJobMatch}
+                    className="primary-gradient w-full py-5 rounded-2xl text-[#00285d] font-black tracking-widest uppercase text-xs shadow-xl shadow-[#adc6ff]/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:scale-[1.01]"
+                  >
+                    <Rocket className="w-4 h-4" />
+                    Analyze Job Match
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </motion.section>
-
-        {/* Secondary Insights / Golden Nuggets */}
-        <section className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {INSIGHTS.map((insight, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + idx * 0.1 }}
-              className={`bg-[#171f33] p-6 rounded-2xl border-l-4 ${insight.color} border-y border-r border-[#424754]/10 shadow-sm hover:translate-x-1 transition-transform`}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <insight.icon className={`${insight.iconColor} w-4 h-4`} />
-                <span
-                  className={`text-[10px] font-black ${insight.iconColor} tracking-widest uppercase`}
-                >
-                  {insight.type}
-                </span>
-              </div>
-              <h4 className="font-black text-[#dae2fd] mb-2 tracking-tight">
-                {insight.title}
-              </h4>
-              <p className="text-xs text-[#8c909f] leading-relaxed font-medium">
-                {insight.desc}
-              </p>
-            </motion.div>
-          ))}
-        </section>
       </main>
 
       {/* Footer */}
