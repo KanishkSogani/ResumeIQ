@@ -17,14 +17,14 @@ import {
   X,
   Sparkles,
   FileType,
-  ArrowRight,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 
 const STEPS = [
   { id: 1, label: "Document Load", sub: "Step 01", active: true },
-  { id: 2, label: "Contextual Target", sub: "Step 02", active: false },
-  { id: 3, label: "Model Calibration", sub: "Step 03", active: false },
+  { id: 2, label: "Model Calibration", sub: "Step 02", active: false },
+  { id: 3, label: "Final Results", sub: "Step 03", active: false },
 ];
 
 const ENGINES = [
@@ -65,7 +65,6 @@ export default function UploadPage() {
     "tfidf",
     "sbert",
   ]);
-  const [jobDescription, setJobDescription] = useState("");
   const [files, setFiles] = useState([
     {
       name: "Senior_Software_Engineer_2024.pdf",
@@ -85,77 +84,71 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
       {/* TopNavBar */}
-      <nav className="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]/80 backdrop-blur-md border-b border-[#424754]/10">
-        <Link
-          href="/"
-          className="text-xl font-black tracking-tighter text-[#adc6ff]"
-        >
+      <header className="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]">
+        <div className="text-xl font-black tracking-tighter text-[#adc6ff]">
           ResumeIQ
-        </Link>
-        <div className="hidden md:flex items-center space-x-8">
+        </div>
+        <nav className="hidden md:flex items-center space-x-8">
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
+            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
             href="/"
           >
             Home
           </Link>
           <Link
-            className="text-[#adc6ff] font-bold border-b-2 border-[#adc6ff] pb-1 antialiased text-md leading-relaxed transition-all"
+            className="text-[#adc6ff] font-bold border-b-2 border-[#adc6ff] pb-1 font-medium text-md leading-relaxed"
             href="/upload"
           >
             Upload
           </Link>
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/dashboard"
+            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
+            href="/history"
           >
             History
           </Link>
           <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="#"
+            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
+            href="/compare"
           >
             Compare
           </Link>
-        </div>
+        </nav>
         <div className="flex items-center space-x-4">
-          <button className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-all text-sm font-medium">
+          <button className="text-[#dae2fd] opacity-70 hover:opacity-100 transition-opacity text-sm tracking-wide">
             Sign In
           </button>
-          <button className="primary-gradient text-[#00285d] px-6 py-2 rounded-lg font-bold scale-95 active:opacity-80 transition-all">
+          <Link
+            href="/dashboard"
+            className="primary-gradient text-[#00285d] px-6 py-2.5 rounded-lg font-bold text-sm scale-95 active:opacity-80 transition-all"
+          >
             Analyze Resume
-          </button>
+          </Link>
         </div>
-      </nav>
+      </header>
 
       <main className="flex-grow hero-gradient relative">
         <div className="max-w-6xl mx-auto px-6 py-12">
           {/* Header Section */}
           <div className="mb-12">
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-4xl md:text-5xl font-black tracking-tight text-[#adc6ff] mb-4 leading-none"
-            >
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#adc6ff] mb-4 leading-none">
               New Analysis
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-[#c2c6d6] max-w-2xl text-lg leading-relaxed"
-            >
+            </h1>
+            <p className="text-[#c2c6d6] max-w-2xl text-lg leading-relaxed opacity-70">
               Prepare your career data for high-fidelity AI curation. Upload
-              your latest resume and target job description to begin the
-              extraction process.
-            </motion.p>
+              your latest resume to begin the extraction process.{" "}
+              <span className="text-[#adc6ff] font-medium">
+                Job descriptions can be added in the next step for personalized
+                insights.
+              </span>
+            </p>
           </div>
 
           {/* Bento-Style Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Steps & Progress Sidebar */}
+            {/* Steps & Progress */}
             <div className="lg:col-span-3 space-y-8">
               <div className="space-y-6">
                 {STEPS.map((step) => (
@@ -182,39 +175,37 @@ export default function UploadPage() {
                 ))}
               </div>
 
-              <div className="p-6 bg-[#131b2e] rounded-xl border border-[#424754]/10">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-[#ffb786] mb-4 flex items-center gap-2">
-                  <Sparkles className="w-3 h-3" />
+              <div className="p-6 bg-[#131b2e] rounded-xl">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-[#ffb786] mb-4">
                   Pro Tip
                 </h4>
-                <p className="text-sm text-[#c2c6d6] leading-relaxed">
-                  S-BERT models provide the highest semantic accuracy for
-                  technical roles. Consider BERT for complex enterprise
-                  descriptions.
+                <p className="text-sm text-[#c2c6d6] leading-relaxed opacity-70">
+                  Focus on the Resume first. After extraction, you can provide
+                  target job descriptions to calculate contextual matching
+                  scores.
                 </p>
               </div>
             </div>
 
             {/* Main Work Area */}
             <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column: Upload & Context */}
-              <div className="space-y-8">
-                {/* Resume Source Card */}
-                <section className="bg-[#171f33] rounded-xl p-8 border border-[#424754]/10 group relative overflow-hidden">
+              {/* Left Column: Upload */}
+              <div className="space-y-8 h-full">
+                <section className="bg-[#171f33] rounded-xl p-8 group relative overflow-hidden h-full flex flex-col">
                   <div className="absolute inset-0 bg-[#adc6ff] opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"></div>
                   <div className="mb-6 flex justify-between items-center">
-                    <h2 className="text-lg font-bold tracking-tight text-[#dae2fd]">
+                    <h2 className="text-lg font-bold tracking-tight">
                       Resume Source
                     </h2>
-                    <FileText className="text-[#adc6ff] w-5 h-5" />
+                    <FileText className="text-[#adc6ff] w-6 h-6" />
                   </div>
 
-                  <div className="border-2 border-dashed border-[#424754] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-[#adc6ff] transition-colors cursor-pointer bg-[#131b2e]">
+                  <div className="border-2 border-dashed border-[#424754] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-[#adc6ff] transition-colors cursor-pointer bg-[#131b2e] flex-grow">
                     <UploadCloud className="w-12 h-12 text-[#4d8eff] mb-4" />
                     <p className="text-[#dae2fd] font-medium mb-1">
                       Drag & drop your resume
                     </p>
-                    <p className="text-sm text-[#c2c6d6] mb-6">
+                    <p className="text-sm text-[#c2c6d6] mb-6 opacity-60">
                       Supports PDF, DOCX (Max 10MB)
                     </p>
                     <button className="bg-[#222a3d] text-[#adc6ff] px-6 py-2 rounded-lg text-sm font-bold border border-[#424754] hover:border-[#adc6ff] transition-all">
@@ -222,84 +213,41 @@ export default function UploadPage() {
                     </button>
                   </div>
 
-                  {/* File List */}
-                  <div className="mt-6 space-y-3">
-                    <AnimatePresence>
-                      {files.map((file, idx) => (
-                        <motion.div
-                          key={file.name}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="flex items-center gap-4 p-4 bg-[#060e20] rounded-lg border border-[#424754]/20"
-                        >
-                          <div className="w-12 h-12 bg-[#2d3449] rounded flex items-center justify-center">
-                            <FileType className="text-[#c2c6d6] w-6 h-6" />
-                          </div>
-                          <div className="flex-grow overflow-hidden">
-                            <p className="text-sm font-semibold truncate text-[#dae2fd]">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-[#c2c6d6]">
-                              {file.size} • {file.status}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => removeFile(idx)}
-                            className="text-[#ffb4ab] opacity-70 hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
+                  {/* File Preview */}
+                  <div className="mt-6 flex items-center gap-4 p-4 bg-[#060e20] rounded-lg border border-[#424754]/20">
+                    <div className="w-12 h-12 bg-[#2d3449] rounded flex items-center justify-center">
+                      <FileText className="text-[#c2c6d6] w-6 h-6" />
+                    </div>
+                    <div className="flex-grow overflow-hidden text-left">
+                      <p className="text-sm font-semibold truncate">
+                        {files[0]?.name || "No file selected"}
+                      </p>
+                      <p className="text-xs text-[#c2c6d6] opacity-60">
+                        {files[0]?.size || ""} • {files[0]?.status || ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeFile(0)}
+                      className="text-[#ffb4ab] opacity-70 hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 </section>
-
-                {/* Job Description Context */}
-                <div className="relative group">
-                  <label className="absolute -top-3 left-4 bg-[#0b1326] px-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#adc6ff] z-10">
-                    Job Description Context
-                  </label>
-                  <div className="relative rounded-xl overflow-hidden bg-[#131b2e] border border-[#424754]/50 focus-within:border-[#adc6ff] transition-colors">
-                    <textarea
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      className="w-full bg-transparent border-none p-6 pt-8 text-[#dae2fd] placeholder:text-[#8c909f] focus:ring-0 transition-all resize-none text-sm leading-relaxed min-h-[220px]"
-                      placeholder="Paste the target job description here to align neural architectures..."
-                    />
-                    <div className="absolute bottom-4 right-4 flex items-center gap-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f]">
-                        Optional
-                      </span>
-                      <div className="h-1 w-24 bg-[#222a3d] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#adc6ff] transition-all duration-300"
-                          style={{
-                            width: `${Math.min((jobDescription.length / 5000) * 100, 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold text-[#8c909f]">
-                        {jobDescription.length}/5000
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Right Column: Model Selection */}
-              <div className="space-y-8">
-                <section className="bg-[#171f33] rounded-xl p-8 h-full flex flex-col border border-[#424754]/10">
+              {/* Right Column: Intelligence Engine */}
+              <div className="space-y-8 h-full">
+                <section className="bg-[#171f33] rounded-xl p-8 h-full flex flex-col">
                   <div className="mb-6 flex justify-between items-center">
-                    <h2 className="text-lg font-bold tracking-tight text-[#dae2fd]">
+                    <h2 className="text-lg font-bold tracking-tight">
                       Intelligence Engine
                     </h2>
-                    <BrainCircuit className="text-[#adc6ff] w-5 h-5" />
+                    <BrainCircuit className="text-[#adc6ff] w-6 h-6" />
                   </div>
-                  <p className="text-sm text-[#c2c6d6] mb-6 leading-relaxed">
-                    Select one or more neural architectures for cross-validation
-                    analysis.
+                  <p className="text-sm text-[#c2c6d6] mb-6 leading-relaxed opacity-70 text-left">
+                    Select neural architectures for initial feature extraction
+                    and semantic parsing.
                   </p>
 
                   <div className="space-y-3 mb-8 flex-grow">
@@ -312,23 +260,21 @@ export default function UploadPage() {
                           className={`w-full flex items-center justify-between p-4 rounded-xl transition-all border ${
                             isSelected
                               ? "bg-[#222a3d] border-[#adc6ff] shadow-lg"
-                              : "bg-[#131b2e] border-transparent hover:border-[#4d8eff]/50"
+                              : "bg-[#131b2e] border-transparent hover:border-[#adc6ff]/50"
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             <engine.icon
                               className={`w-5 h-5 ${isSelected ? "text-[#adc6ff]" : "text-[#c2c6d6]"}`}
                             />
-                            <span
-                              className={`text-sm font-medium ${isSelected ? "text-[#dae2fd]" : "text-[#c2c6d6]"}`}
-                            >
+                            <span className="text-sm font-medium">
                               {engine.name}
                             </span>
                           </div>
                           {isSelected ? (
                             <CheckCircle2 className="w-5 h-5 text-[#adc6ff]" />
                           ) : (
-                            <PlusCircle className="w-5 h-5 text-[#8c909f]" />
+                            <Plus className="w-5 h-5 text-[#8c909f]" />
                           )}
                         </button>
                       );
@@ -336,7 +282,7 @@ export default function UploadPage() {
                   </div>
 
                   <div className="pt-6 border-t border-[#424754]/20">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#c2c6d6] mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#c2c6d6] mb-4 text-left">
                       Selected Architectures
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -350,10 +296,7 @@ export default function UploadPage() {
                             {engine?.name.split(" ")[0]}
                             <X
                               className="w-3 h-3 cursor-pointer hover:text-white"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleEngine(id);
-                              }}
+                              onClick={() => toggleEngine(id)}
                             />
                           </span>
                         );
@@ -366,18 +309,11 @@ export default function UploadPage() {
           </div>
 
           {/* Action Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-12 flex flex-col md:flex-row items-center justify-between gap-8 p-10 bg-[#171f33] rounded-2xl relative overflow-hidden border border-[#424754]/10"
-          >
+          <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-8 p-10 bg-[#171f33] rounded-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-24 bg-[#adc6ff] opacity-5 rounded-full blur-[100px] -mr-20 -mt-20"></div>
-            <div className="relative z-10 text-center md:text-left">
-              <h3 className="text-2xl font-bold mb-2 text-[#dae2fd]">
-                Ready to Analyze?
-              </h3>
-              <p className="text-[#c2c6d6]">
+            <div className="relative z-10 text-left">
+              <h3 className="text-2xl font-bold mb-2">Start Extraction</h3>
+              <p className="text-[#c2c6d6] opacity-70">
                 Estimated processing time: 4-6 seconds
               </p>
             </div>
@@ -387,22 +323,22 @@ export default function UploadPage() {
                 className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
               >
                 Analyze Resume
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-6 h-6" />
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center bg-[#0b1326] border-t border-[#424754]/10">
-        <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
+        <div className="mb-6 md:mb-0 text-left">
           <div className="text-lg font-bold text-[#adc6ff] mb-2">ResumeIQ</div>
           <p className="text-sm tracking-wide text-[#dae2fd] opacity-50">
-            © 2024 ResumeIQ. Professional grade AI analysis.
+            © 2024 ResumeIQ. Editorial-grade AI analysis.
           </p>
         </div>
-        <div className="flex gap-8">
+        <div className="flex flex-wrap justify-center gap-8">
           <a
             className="text-sm tracking-wide text-[#dae2fd] opacity-50 hover:opacity-100 transition-opacity underline-offset-4 hover:underline"
             href="#"
