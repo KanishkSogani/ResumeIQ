@@ -1,9 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
-  Bell,
-  Settings,
   BarChart3,
   Zap,
   Target,
@@ -12,61 +11,302 @@ import {
   Info,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { TopNavBar } from "@/components/LandingPage/TopNavBar";
+import { API_BASE_URL } from "@/lib/api";
 
-const MODELS = [
-  {
-    name: "TF-IDF + Random Forest",
-    role: "Full-Stack Developer",
-    confidence: 74,
-    latency: "12ms",
-    featured: false,
-  },
-  {
-    name: "Doc2Vec",
-    role: "Web Engineer",
-    confidence: 68,
-    latency: "34ms",
-    featured: false,
-  },
-  {
-    name: "CNN",
-    role: "Senior Full-Stack",
-    confidence: 89,
-    latency: "45ms",
-    featured: false,
-  },
-  {
-    name: "Sentence-BERT",
-    role: "Senior Full-Stack",
-    confidence: 91,
-    latency: "110ms",
-    featured: false,
-  },
-  {
-    name: "Fine-tuned BERT",
-    role: "Senior Full-Stack Developer",
-    confidence: 94.2,
-    latency: "185ms",
-    featured: true,
-    label: "Champion Model",
-  },
-];
+type ModelResult = {
+  name: string;
+  prediction: string;
+  confidence: number;
+  latency_ms: number;
+};
 
-const CHART_DATA = [
-  { label: "TF-IDF", value: 74 },
-  { label: "Doc2Vec", value: 68 },
-  { label: "CNN", value: 89 },
-  { label: "S-BERT", value: 91 },
-  { label: "BERT", value: 94.2, highlight: true },
-];
+type ReportData = {
+  report_id: string;
+  file_name: string;
+  ats_score: number;
+  created_at?: string;
+  models: ModelResult[];
+};
+
+type AggregatedModel = {
+  name: string;
+  confidence: number;
+  latencyMs: number;
+  topPrediction: string;
+  featured: boolean;
+  label?: string;
+};
+
+const toPercent = (value: number): number => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return numericValue <= 1 ? numericValue * 100 : numericValue;
+};
+
+const formatReportTitle = (reports: ReportData[]): string => {
+  if (!reports.length) return "No resume selected";
+  if (reports.length === 1) return reports[0].file_name;
+  return `${reports[0].file_name} +${reports.length - 1} more`;
+};
 
 export default function ComparePage() {
+  const searchParams = useSearchParams();
+  const reportIdsParam = searchParams.get("reportIds") || "";
+
+  const [reports, setReports] = useState<ReportData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const requestedIds = useMemo(
+    () =>
+      reportIdsParam
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    [reportIdsParam],
+  );
+
+  useEffect(() => {
+    const fetchReportsForComparison = async () => {
+      if (!API_BASE_URL) {
+        setError(
+          "Missing API URL. Set NEXT_PUBLIC_API_BASE_URL in web/.env.local.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        if (requestedIds.length >= 1) {
+          const responses = await Promise.all(
+            requestedIds.map((reportId) =>
+              fetch(`${API_BASE_URL}/reports/${encodeURIComponent(reportId)}`),
+            ),
+          );
+
+          const badResponse = responses.find((response) => !response.ok);
+          if (badResponse) {
+            const errorData = await badResponse.json().catch(() => null);
+            throw new Error(
+              errorData?.detail || "Failed to load selected reports.",
+            );
+          }
+
+          const reportsData = (await Promise.all(
+            responses.map((response) => response.json()),
+          )) as ReportData[];
+
+          setReports(reportsData);
+          return;
+        }
+
+        const latestResponse = await fetch(
+          `${API_BASE_URL}/reports/?sort=latest`,
+        );
+
+        if (!latestResponse.ok) {
+          const errorData = await latestResponse.json().catch(() => null);
+          throw new Error(
+            errorData?.detail || "Failed to load reports for comparison.",
+          );
+        }
+
+        const latestReports = (await latestResponse.json()) as ReportData[];
+        setReports(
+          Array.isArray(latestReports) ? latestReports.slice(0, 2) : [],
+        );
+      } catch (fetchError) {
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Unable to load comparison data.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReportsForComparison();
+  }, [requestedIds]);
+
+  const averageAtsScore = useMemo(() => {
+    if (!reports.length) return 0;
+    const total = reports.reduce(
+      (acc, report) => acc + (report.ats_score || 0),
+      0,
+    );
+    return Math.round(total / reports.length);
+  }, [reports]);
+
+  const aggregatedModels = useMemo<AggregatedModel[]>(() => {
+    const modelMap = new Map<
+      string,
+      {
+        confidenceTotal: number;
+        latencyTotal: number;
+        count: number;
+        predictionFrequency: Map<string, number>;
+      }
+    >();
+
+    for (const report of reports) {
+      for (const model of report.models || []) {
+        const key = model.name;
+        if (!modelMap.has(key)) {
+          modelMap.set(key, {
+            confidenceTotal: 0,
+            latencyTotal: 0,
+            count: 0,
+            predictionFrequency: new Map<string, number>(),
+          });
+        }
+
+        const current = modelMap.get(key);
+        if (!current) continue;
+
+        current.confidenceTotal += toPercent(model.confidence);
+        current.latencyTotal += Number(model.latency_ms) || 0;
+        current.count += 1;
+        current.predictionFrequency.set(
+          model.prediction,
+          (current.predictionFrequency.get(model.prediction) || 0) + 1,
+        );
+      }
+    }
+
+    const models = Array.from(modelMap.entries()).map(([name, values]) => {
+      const topPrediction = Array.from(
+        values.predictionFrequency.entries(),
+      ).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+      return {
+        name,
+        confidence: values.count ? values.confidenceTotal / values.count : 0,
+        latencyMs: values.count ? values.latencyTotal / values.count : 0,
+        topPrediction: topPrediction || "Unknown",
+        featured: false,
+      };
+    });
+
+    const ranked = models.sort((a, b) => b.confidence - a.confidence);
+
+    if (ranked[0]) {
+      ranked[0] = {
+        ...ranked[0],
+        featured: true,
+        label: "Champion Model",
+      };
+    }
+
+    return ranked;
+  }, [reports]);
+
+  const chartData = useMemo(
+    () =>
+      aggregatedModels.map((model) => ({
+        label: model.name,
+        value: Math.max(0, Math.min(100, Number(model.confidence.toFixed(1)))),
+        highlight: model.featured,
+      })),
+    [aggregatedModels],
+  );
+
+  const chartDataWithHeight = useMemo(
+    () =>
+      chartData.map((item) => ({
+        ...item,
+        renderHeight: item.value > 0 ? Math.max(item.value, 8) : 0,
+      })),
+    [chartData],
+  );
+
+  const performanceSummary = useMemo(() => {
+    if (!aggregatedModels.length) {
+      return {
+        fastest: null as AggregatedModel | null,
+        mostAccurate: null as AggregatedModel | null,
+        bestTradeoff: null as AggregatedModel | null,
+      };
+    }
+
+    const fastest = [...aggregatedModels].sort(
+      (a, b) => a.latencyMs - b.latencyMs,
+    )[0];
+    const mostAccurate = [...aggregatedModels].sort(
+      (a, b) => b.confidence - a.confidence,
+    )[0];
+    const bestTradeoff = [...aggregatedModels].sort((a, b) => {
+      const scoreA = a.confidence / Math.max(1, a.latencyMs);
+      const scoreB = b.confidence / Math.max(1, b.latencyMs);
+      return scoreB - scoreA;
+    })[0];
+
+    return { fastest, mostAccurate, bestTradeoff };
+  }, [aggregatedModels]);
+
+  const agreement = useMemo(() => {
+    const frequency = new Map<string, number>();
+    const totalPredictions = reports.reduce(
+      (acc, report) => acc + (report.models?.length || 0),
+      0,
+    );
+
+    for (const report of reports) {
+      for (const model of report.models || []) {
+        frequency.set(
+          model.prediction,
+          (frequency.get(model.prediction) || 0) + 1,
+        );
+      }
+    }
+
+    const [topPrediction, topCount] = Array.from(frequency.entries()).sort(
+      (a, b) => b[1] - a[1],
+    )[0] || ["Unknown", 0];
+
+    return {
+      topPrediction,
+      topCount,
+      totalPredictions,
+    };
+  }, [reports]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
       <TopNavBar />
 
       <main className="pt-12 pb-20 px-8 max-w-7xl mx-auto w-full flex-grow">
+        {isLoading && (
+          <div className="mb-8 rounded-xl border border-[#adc6ff]/30 bg-[#131b2e] px-4 py-3 text-sm text-[#adc6ff]">
+            Loading comparison data...
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-8 rounded-xl border border-[#ffb4ab]/40 bg-[#2a1218] px-4 py-3 text-sm text-[#ffb4ab]">
+            {error}
+          </div>
+        )}
+
+        {!isLoading && !error && reports.length === 0 && (
+          <div className="mb-8 rounded-xl border border-[#424754]/20 bg-[#131b2e] px-4 py-6 text-sm text-[#c2c6d6]">
+            No reports available for comparison.
+            <div className="mt-3">
+              <Link
+                href="/history"
+                className="text-[#adc6ff] font-semibold hover:opacity-80 transition-opacity"
+              >
+                Go to History and select reports
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <header className="flex flex-col items-center text-center mb-20">
           <motion.span
@@ -82,7 +322,7 @@ export default function ComparePage() {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-[#dae2fd]"
           >
-            Jordan_Dev_Resume_2024.pdf
+            {formatReportTitle(reports)}
           </motion.h1>
 
           <motion.div
@@ -92,23 +332,23 @@ export default function ComparePage() {
             className="relative inline-flex flex-col items-center justify-center p-8 rounded-full bg-[#131b2e] border border-[#424754]/15"
           >
             <div className="text-6xl font-black tracking-tighter text-[#adc6ff] [text-shadow:0_0_15px_rgba(173,198,255,0.3)]">
-              88
+              {averageAtsScore}
             </div>
             <div className="text-sm tracking-widest uppercase text-[#c2c6d6] mt-2 font-bold">
-              ATS Score
+              Avg ATS Score
             </div>
             <div className="absolute -bottom-12 w-64 text-[10px] text-[#c2c6d6] leading-relaxed italic opacity-60">
-              ATS score remains constant across all models as the resume is the
-              same.
+              Calculated from {reports.length} selected
+              {reports.length === 1 ? " report" : " reports"}.
             </div>
           </motion.div>
         </header>
 
         {/* Model Comparison Grid */}
         <section className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-24">
-          {MODELS.map((model, idx) => (
+          {aggregatedModels.map((model, idx) => (
             <motion.div
-              key={idx}
+              key={`${model.name}-${idx}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + idx * 0.1 }}
@@ -130,7 +370,7 @@ export default function ComparePage() {
                   {model.name}
                 </h3>
                 <p className="text-lg font-bold leading-tight mb-6 text-[#dae2fd]">
-                  {model.role}
+                  {model.topPrediction}
                 </p>
               </div>
               <div className="space-y-3">
@@ -143,7 +383,7 @@ export default function ComparePage() {
                   <span
                     className={`font-black ${model.featured ? "text-2xl text-[#adc6ff]" : "text-primary text-[#adc6ff]"}`}
                   >
-                    {model.confidence}%
+                    {model.confidence.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-end">
@@ -155,7 +395,7 @@ export default function ComparePage() {
                   <span
                     className={`text-xs ${model.featured ? "text-[#adc6ff] font-bold" : "text-[#dae2fd]"}`}
                   >
-                    {model.latency}
+                    {Math.round(model.latencyMs)}ms
                   </span>
                 </div>
               </div>
@@ -178,18 +418,15 @@ export default function ComparePage() {
               </h2>
               <BarChart3 className="text-[#adc6ff] w-6 h-6" />
             </div>
-            <div className="h-64 flex items-end gap-6 px-4 border-b border-[#424754]/20">
-              {CHART_DATA.map((item, idx) => (
+            <div className="h-64 flex items-stretch gap-6 px-4 border-b border-[#424754]/20">
+              {chartDataWithHeight.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex-1 flex flex-col items-center gap-4 group"
+                  className="flex-1 h-full flex flex-col items-center group"
                 >
-                  <div className="w-full relative flex flex-col justify-end h-full">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      whileInView={{ height: `${item.value}%` }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.5 + idx * 0.1 }}
+                  <div className="w-full relative flex-1 min-h-0 flex items-end">
+                    <div
+                      style={{ height: `${item.renderHeight}%` }}
                       className={`w-full rounded-t-lg transition-all duration-500 relative group ${
                         item.highlight
                           ? "primary-gradient shadow-[0_0_20px_rgba(173,198,255,0.3)]"
@@ -199,10 +436,10 @@ export default function ComparePage() {
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity text-[#dae2fd]">
                         {item.value}%
                       </div>
-                    </motion.div>
+                    </div>
                   </div>
                   <span
-                    className={`text-[10px] uppercase tracking-tighter text-center leading-none h-8 flex items-center ${
+                    className={`mt-4 text-[10px] uppercase tracking-tighter text-center leading-none h-8 flex items-center ${
                       item.highlight
                         ? "text-[#adc6ff] font-bold"
                         : "text-[#c2c6d6]"
@@ -212,6 +449,12 @@ export default function ComparePage() {
                   </span>
                 </div>
               ))}
+
+              {chartDataWithHeight.length === 0 && (
+                <div className="w-full h-full flex items-center justify-center text-sm text-[#8c909f]">
+                  No model confidence data available for chart.
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -236,7 +479,12 @@ export default function ComparePage() {
                       Fastest Model
                     </p>
                     <p className="font-bold text-[#dae2fd]">
-                      TF-IDF <span className="text-[#adc6ff] ml-2">12ms</span>
+                      {performanceSummary.fastest?.name || "N/A"}{" "}
+                      <span className="text-[#adc6ff] ml-2">
+                        {performanceSummary.fastest
+                          ? `${Math.round(performanceSummary.fastest.latencyMs)}ms`
+                          : "-"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -249,7 +497,12 @@ export default function ComparePage() {
                       Most Accurate
                     </p>
                     <p className="font-bold text-[#dae2fd]">
-                      BERT <span className="text-[#adc6ff] ml-2">94.2%</span>
+                      {performanceSummary.mostAccurate?.name || "N/A"}{" "}
+                      <span className="text-[#adc6ff] ml-2">
+                        {performanceSummary.mostAccurate
+                          ? `${performanceSummary.mostAccurate.confidence.toFixed(1)}%`
+                          : "-"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -262,8 +515,12 @@ export default function ComparePage() {
                       Best Trade-off
                     </p>
                     <p className="font-bold text-[#dae2fd]">
-                      CNN{" "}
-                      <span className="text-[#adc6ff] ml-2">89% @ 45ms</span>
+                      {performanceSummary.bestTradeoff?.name || "N/A"}{" "}
+                      <span className="text-[#adc6ff] ml-2">
+                        {performanceSummary.bestTradeoff
+                          ? `${performanceSummary.bestTradeoff.confidence.toFixed(1)}% @ ${Math.round(performanceSummary.bestTradeoff.latencyMs)}ms`
+                          : "-"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -284,11 +541,13 @@ export default function ComparePage() {
                 </h4>
               </div>
               <p className="text-sm leading-relaxed text-[#dae2fd]">
-                <strong className="text-[#adc6ff]">4 out of 5</strong> models
-                predict{" "}
-                <span className="font-bold">Senior Full-Stack Developer</span>.
-                This high consensus indicates strong alignment between semantic
-                markers and keyword metrics.
+                <strong className="text-[#adc6ff]">
+                  {agreement.topCount} out of {agreement.totalPredictions}
+                </strong>{" "}
+                model inferences predict{" "}
+                <span className="font-bold">{agreement.topPrediction}</span>.
+                This consensus is computed from the live model outputs across
+                selected reports.
               </p>
             </motion.div>
           </div>
@@ -307,19 +566,14 @@ export default function ComparePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="relative pl-6 border-l border-[#adc6ff]/20">
               <p className="text-lg leading-relaxed text-[#c2c6d6] italic opacity-80">
-                "Traditional models like{" "}
-                <span className="text-[#dae2fd] font-semibold">TF-IDF</span>{" "}
-                rely on keyword frequency, acting as high-speed lexical
-                scanners."
+                "Traditional models usually show lower latency while semantic
+                transformers often provide deeper context signals."
               </p>
             </div>
             <div className="relative pl-6 border-l border-[#adc6ff]/20">
               <p className="text-lg leading-relaxed text-[#c2c6d6] opacity-80">
-                "In contrast, transformer-based models like{" "}
-                <span className="text-[#adc6ff] font-semibold">BERT</span> and{" "}
-                <span className="text-[#adc6ff] font-semibold">S-BERT</span>{" "}
-                understand semantic context and long-range dependencies,
-                recognizing expertise beyond mere word matches."
+                "Use this panel to compare confidence, latency, and prediction
+                agreement directly from your stored analysis runs."
               </p>
             </div>
           </div>

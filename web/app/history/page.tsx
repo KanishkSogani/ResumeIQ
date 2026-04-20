@@ -1,106 +1,134 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
   FileText,
   Briefcase,
-  History as HistoryIcon,
-  ArrowRight,
-  Sparkles,
   Check,
-  Award,
   ArrowRightCircle,
   Columns2,
 } from "lucide-react";
 import Link from "next/link";
 import { TopNavBar } from "@/components/LandingPage/TopNavBar";
+import { API_BASE_URL } from "@/lib/api";
 
-const HISTORY_DATA = [
-  {
-    id: "1",
-    filename: "Senior_Product_Designer_v2.pdf",
-    date: "Oct 12, 2023",
-    role: "Product Designer",
-    score: 88,
-    tags: [
-      {
-        label: "AI Recommended",
-        icon: Sparkles,
-        color: "bg-[#ffb786]/20 text-[#ffb786] border-[#ffb786]/20",
-      },
-      {
-        label: "7 Years Exp",
-        icon: HistoryIcon,
-        color: "bg-[#222a3d] text-[#c2c6d6] border-[#424754]/20",
-      },
-    ],
-  },
-  {
-    id: "2",
-    filename: "Frontend_Dev_Google_App.pdf",
-    date: "Sep 28, 2023",
-    role: "Frontend Engineer",
-    score: 72,
-    tags: [
-      {
-        label: "3 Years Exp",
-        icon: HistoryIcon,
-        color: "bg-[#222a3d] text-[#c2c6d6] border-[#424754]/20",
-      },
-    ],
-  },
-  {
-    id: "3",
-    filename: "Creative_Director_Final.docx",
-    date: "Aug 15, 2023",
-    role: "Creative Director",
-    score: 94,
-    tags: [
-      {
-        label: "Gold Standard",
-        icon: Award,
-        color: "bg-[#ffb786]/20 text-[#ffb786] border-[#ffb786]/20",
-      },
-      {
-        label: "12 Years Exp",
-        icon: HistoryIcon,
-        color: "bg-[#222a3d] text-[#c2c6d6] border-[#424754]/20",
-      },
-    ],
-  },
-  {
-    id: "4",
-    filename: "Data_Analyst_Startup.pdf",
-    date: "July 22, 2023",
-    role: "Data Scientist",
-    score: 61,
-    tags: [
-      {
-        label: "Entry Level",
-        icon: HistoryIcon,
-        color: "bg-[#222a3d] text-[#c2c6d6] border-[#424754]/20",
-      },
-    ],
-  },
-];
+type ModelResult = {
+  name: string;
+  prediction: string;
+  confidence: number;
+  latency_ms: number;
+};
+
+type ReportItem = {
+  report_id: string;
+  file_name: string;
+  ats_score: number;
+  created_at?: string;
+  models: ModelResult[];
+};
+
+const formatDate = (value?: string): string => {
+  if (!value) return "Unknown date";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Unknown date";
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  }).format(parsed);
+};
+
+const getTopRole = (models: ModelResult[]): string => {
+  if (!models?.length) return "Unknown role";
+  const top = [...models].sort(
+    (a, b) => Number(b.confidence || 0) - Number(a.confidence || 0),
+  )[0];
+  return top?.prediction || "Unknown role";
+};
+
+const getTopModelName = (models: ModelResult[]): string => {
+  if (!models?.length) return "N/A";
+  const top = [...models].sort(
+    (a, b) => Number(b.confidence || 0) - Number(a.confidence || 0),
+  )[0];
+  return top?.name || "N/A";
+};
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!API_BASE_URL) {
+        setError(
+          "Missing API URL. Set NEXT_PUBLIC_API_BASE_URL in web/.env.local.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(`${API_BASE_URL}/reports/?sort=latest`);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(
+            errorData?.detail || "Failed to load report history.",
+          );
+        }
+
+        const data: ReportItem[] = await response.json();
+        const sortedReports = (Array.isArray(data) ? data : []).sort((a, b) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return timeB - timeA;
+        });
+        setReports(sortedReports);
+      } catch (fetchError) {
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Unable to load report history.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   const toggleSelection = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
+    setSelectedId((prev) => (prev === id ? null : id));
   };
 
-  const filteredHistory = HISTORY_DATA.filter(
-    (item) =>
-      item.filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.role.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredHistory = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return reports;
+
+    return reports.filter((item) => {
+      const fileNameMatch = item.file_name
+        .toLowerCase()
+        .includes(normalizedQuery);
+      const roleMatch = getTopRole(item.models)
+        .toLowerCase()
+        .includes(normalizedQuery);
+      return fileNameMatch || roleMatch;
+    });
+  }, [reports, searchQuery]);
+
+  const canRunComparison = Boolean(selectedId);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326]">
@@ -153,10 +181,28 @@ export default function HistoryPage() {
 
         {/* History List */}
         <div className="flex flex-col space-y-4">
+          {isLoading && (
+            <div className="rounded-xl border border-[#adc6ff]/30 bg-[#131b2e] px-4 py-3 text-sm text-[#adc6ff]">
+              Loading report history...
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl border border-[#ffb4ab]/40 bg-[#2a1218] px-4 py-3 text-sm text-[#ffb4ab]">
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && filteredHistory.length === 0 && (
+            <div className="rounded-xl border border-[#424754]/20 bg-[#131b2e] px-4 py-6 text-sm text-[#c2c6d6]">
+              No reports found. Upload and analyze a resume to see history here.
+            </div>
+          )}
+
           <AnimatePresence mode="popLayout">
             {filteredHistory.map((item, idx) => (
               <motion.div
-                key={item.id}
+                key={item.report_id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
@@ -169,16 +215,16 @@ export default function HistoryPage() {
                     </div>
                     <div className="min-w-0 flex-1 text-left">
                       <h3 className="text-xl font-bold text-[#dae2fd] group-hover:text-[#adc6ff] transition-colors truncate">
-                        {item.filename}
+                        {item.file_name}
                       </h3>
                       <div className="flex items-center space-x-4 mt-1">
                         <p className="text-sm text-[#c2c6d6] opacity-60">
-                          Uploaded on {item.date}
+                          Uploaded on {formatDate(item.created_at)}
                         </p>
                         <span className="w-1 h-1 bg-[#424754] rounded-full hidden md:block"></span>
                         <div className="hidden md:flex items-center text-sm text-[#c2c6d6] opacity-60">
                           <Briefcase className="w-3.5 h-3.5 mr-1.5" />
-                          {item.role}
+                          {getTopRole(item.models)}
                         </div>
                       </div>
                     </div>
@@ -186,19 +232,16 @@ export default function HistoryPage() {
 
                   <div className="flex flex-wrap items-center gap-6 lg:justify-end">
                     <div className="flex items-center gap-2">
-                      {item.tags.map((tag, tIdx) => (
-                        <div
-                          key={tIdx}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold flex items-center border ${tag.color}`}
-                        >
-                          <tag.icon className="w-3 h-3 mr-1.5" />
-                          {tag.label}
-                        </div>
-                      ))}
+                      <div className="px-3 py-1 rounded-full text-[10px] font-bold flex items-center border bg-[#ffb786]/20 text-[#ffb786] border-[#ffb786]/20">
+                        Top Model: {getTopModelName(item.models)}
+                      </div>
+                      <div className="px-3 py-1 rounded-full text-[10px] font-bold flex items-center border bg-[#222a3d] text-[#c2c6d6] border-[#424754]/20">
+                        Models: {item.models?.length || 0}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end min-w-[80px]">
                       <div className="text-3xl font-black text-[#adc6ff] tracking-tighter">
-                        {item.score}%
+                        {item.ats_score}%
                       </div>
                       <span className="text-[9px] uppercase tracking-widest text-[#c2c6d6] opacity-50 leading-none">
                         ATS Score
@@ -209,8 +252,8 @@ export default function HistoryPage() {
                         <input
                           type="checkbox"
                           className="hidden peer"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => toggleSelection(item.id)}
+                          checked={selectedId === item.report_id}
+                          onChange={() => toggleSelection(item.report_id)}
                         />
                         <div className="w-5 h-5 border-2 border-[#424754] rounded flex items-center justify-center peer-checked:bg-[#adc6ff] peer-checked:border-[#adc6ff] transition-all">
                           <Check className="w-3.5 h-3.5 text-[#00285d] hidden peer-checked:block stroke-[4]" />
@@ -220,7 +263,7 @@ export default function HistoryPage() {
                         </span>
                       </label>
                       <Link
-                        href="/dashboard"
+                        href={`/dashboard?reportId=${encodeURIComponent(item.report_id)}`}
                         className="text-[#adc6ff] font-bold flex items-center hover:translate-x-1 transition-transform whitespace-nowrap text-sm"
                       >
                         View
@@ -236,7 +279,7 @@ export default function HistoryPage() {
 
         {/* Comparison Float */}
         <AnimatePresence>
-          {selectedIds.length > 0 && (
+          {selectedId && (
             <motion.div
               initial={{ y: 100, x: "-50%", opacity: 0 }}
               animate={{ y: 0, x: "-50%", opacity: 1 }}
@@ -245,31 +288,33 @@ export default function HistoryPage() {
             >
               <div className="bg-[#171f33]/90 backdrop-blur-xl rounded-full p-2 pl-8 flex items-center justify-between shadow-2xl border border-[#adc6ff]/20">
                 <div className="flex items-center">
-                  <div className="flex -space-x-3 mr-4">
-                    {selectedIds.slice(0, 2).map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-10 h-10 rounded-full border-2 border-[#0b1326] bg-[#222a3d] flex items-center justify-center"
-                      >
-                        <FileText className="w-4 h-4 text-[#adc6ff]" />
-                      </div>
-                    ))}
-                    {selectedIds.length > 2 && (
-                      <div className="w-10 h-10 rounded-full border-2 border-[#0b1326] bg-[#222a3d] flex items-center justify-center text-[10px] font-bold text-[#adc6ff]">
-                        +{selectedIds.length - 2}
-                      </div>
-                    )}
+                  <div className="mr-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-[#0b1326] bg-[#222a3d] flex items-center justify-center">
+                      <FileText className="w-4 h-4 text-[#adc6ff]" />
+                    </div>
                   </div>
                   <span className="text-sm font-medium text-[#dae2fd]">
-                    {selectedIds.length}{" "}
-                    {selectedIds.length === 1 ? "Resume" : "Resumes"} selected
-                    for comparison
+                    1 Resume selected for model comparison
                   </span>
                 </div>
-                <button className="primary-gradient text-[#00285d] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform">
-                  Run Comparison
-                  <Columns2 className="w-4 h-4" />
-                </button>
+                {canRunComparison ? (
+                  <Link
+                    href={`/compare?reportIds=${encodeURIComponent(selectedId)}`}
+                    className="primary-gradient text-[#00285d] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                  >
+                    View Comparison
+                    <Columns2 className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="primary-gradient text-[#00285d] px-6 py-3 rounded-full font-bold flex items-center gap-2 opacity-70 cursor-not-allowed"
+                  >
+                    Select a Resume
+                    <Columns2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
