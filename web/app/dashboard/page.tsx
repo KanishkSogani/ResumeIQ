@@ -18,6 +18,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import Link from "next/link";
+import { TopNavBar } from "@/components/LandingPage/TopNavBar";
 
 const ATS_METRICS = [
   { label: "Keyword Matching", value: 92, color: "bg-[#adc6ff]" },
@@ -104,52 +105,7 @@ const NEXT_STEPS = [
 export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
-      {/* TopNavBar */}
-      <nav className="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]/80 backdrop-blur-md border-b border-[#424754]/10">
-        <Link
-          href="/"
-          className="text-xl font-black tracking-tighter text-[#adc6ff]"
-        >
-          ResumeIQ
-        </Link>
-        <div className="hidden md:flex space-x-8 items-center">
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/"
-          >
-            Home
-          </Link>
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/upload"
-          >
-            Upload
-          </Link>
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/history"
-          >
-            History
-          </Link>
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 antialiased text-md leading-relaxed"
-            href="/compare"
-          >
-            Compare
-          </Link>
-        </div>
-        <div className="flex space-x-4">
-          <button className="text-[#dae2fd] opacity-70 hover:opacity-100 transition-all text-sm font-medium">
-            Sign In
-          </button>
-          <Link
-            href="/upload"
-            className="primary-gradient text-[#00285d] px-5 py-2 rounded-lg font-bold hover:scale-95 active:opacity-80 transition-all text-sm"
-          >
-            Analyze Resume
-          </Link>
-        </div>
-      </nav>
+      <TopNavBar />
 
       <main className="max-w-7xl mx-auto px-8 py-8 w-full">
         {/* Summary Insight Bar */}

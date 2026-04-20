@@ -19,11 +19,10 @@ import {
   Plus,
   Bell,
   Settings,
-  User,
   Wand2,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import { TopNavBar } from "@/components/LandingPage/TopNavBar";
 
 export default function JobMatchingPage() {
   const matchedCompetencies = [
@@ -66,61 +65,9 @@ export default function JobMatchingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0b1326]/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-[0px_24px_48px_rgba(0,0,0,0.4)] border-b border-[#424754]/10">
-        <Link
-          href="/"
-          className="text-2xl font-black tracking-tighter text-[#adc6ff]"
-        >
-          ResumeIQ
-        </Link>
-        <div className="hidden md:flex items-center gap-8">
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#adc6ff] transition-all duration-300"
-            href="/dashboard"
-          >
-            Dashboard
-          </Link>
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#adc6ff] transition-all duration-300"
-            href="/compare"
-          >
-            Analysis
-          </Link>
-          <Link
-            className="text-[#adc6ff] border-b-2 border-[#adc6ff] pb-1 font-bold"
-            href="/job-matching"
-          >
-            Job Matching
-          </Link>
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#adc6ff] transition-all duration-300"
-            href="/history"
-          >
-            Templates
-          </Link>
-        </div>
-        <div className="flex items-center gap-6">
-          <Link
-            href="/upload"
-            className="bg-[#adc6ff] text-[#00285d] px-6 py-2.5 rounded-lg font-bold scale-95 active:scale-90 transition-all"
-          >
-            Upload Resume
-          </Link>
-          <div className="w-10 h-10 rounded-full border border-[#424754]/30 overflow-hidden">
-            <Image
-              src="https://picsum.photos/seed/pro/100/100"
-              alt="User"
-              width={40}
-              height={40}
-              className="object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </div>
-      </nav>
+      <TopNavBar />
 
-      <main className="pt-32 pb-20 px-8 max-w-[1440px] mx-auto w-full">
+      <main className="pt-12 pb-20 px-8 max-w-[1440px] mx-auto w-full">
         {/* Header Section */}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>

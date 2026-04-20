@@ -12,6 +12,7 @@ import {
   Info,
 } from "lucide-react";
 import Link from "next/link";
+import { TopNavBar } from "@/components/LandingPage/TopNavBar";
 
 const MODELS = [
   {
@@ -63,52 +64,9 @@ const CHART_DATA = [
 export default function ComparePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0b1326]/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-[0px_24px_48px_rgba(0,0,0,0.4)] border-b border-[#424754]/10">
-        <Link
-          href="/"
-          className="text-2xl font-black tracking-tighter text-[#adc6ff]"
-        >
-          ResumeIQ
-        </Link>
-        <div className="hidden md:flex items-center gap-8">
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
-            href="/dashboard"
-          >
-            Dashboard
-          </Link>
-          <Link
-            className="text-[#adc6ff] border-b-2 border-[#adc6ff] pb-1 font-bold"
-            href="/compare"
-          >
-            Analysis
-          </Link>
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
-            href="/upload"
-          >
-            Models
-          </Link>
-          <Link
-            className="text-[#dae2fd]/60 font-medium hover:text-[#dae2fd] transition-all duration-300"
-            href="/history"
-          >
-            History
-          </Link>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Bell className="text-[#adc6ff] cursor-pointer hover:bg-[#222a3d] p-2 rounded-full transition-all w-9 h-9" />
-            <Settings className="text-[#adc6ff] cursor-pointer hover:bg-[#222a3d] p-2 rounded-full transition-all w-9 h-9" />
-          </div>
-          <button className="primary-gradient text-[#00285d] px-5 py-2 rounded-lg font-bold active:scale-95 transition-transform">
-            Upgrade
-          </button>
-        </div>
-      </nav>
+      <TopNavBar />
 
-      <main className="pt-32 pb-20 px-8 max-w-7xl mx-auto w-full flex-grow">
+      <main className="pt-12 pb-20 px-8 max-w-7xl mx-auto w-full flex-grow">
         {/* Header Section */}
         <header className="flex flex-col items-center text-center mb-20">
           <motion.span

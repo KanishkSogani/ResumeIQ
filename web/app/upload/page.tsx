@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { TopNavBar } from "@/components/LandingPage/TopNavBar";
 
 const STEPS = [
   { id: 1, label: "Document Load", sub: "Step 01", active: true },
@@ -95,49 +96,7 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326] text-[#dae2fd]">
-      {/* TopNavBar */}
-      <header className="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]">
-        <div className="text-xl font-black tracking-tighter text-[#adc6ff]">
-          ResumeIQ
-        </div>
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
-            href="/"
-          >
-            Home
-          </Link>
-          <Link
-            className="text-[#adc6ff] font-bold border-b-2 border-[#adc6ff] pb-1 font-medium text-md leading-relaxed"
-            href="/upload"
-          >
-            Upload
-          </Link>
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
-            href="/history"
-          >
-            History
-          </Link>
-          <Link
-            className="text-[#dae2fd] opacity-70 hover:text-[#adc6ff] transition-colors duration-200 font-medium text-md leading-relaxed"
-            href="/compare"
-          >
-            Compare
-          </Link>
-        </nav>
-        <div className="flex items-center space-x-4">
-          <button className="text-[#dae2fd] opacity-70 hover:opacity-100 transition-opacity text-sm tracking-wide">
-            Sign In
-          </button>
-          <Link
-            href="/dashboard"
-            className="primary-gradient text-[#00285d] px-6 py-2.5 rounded-lg font-bold text-sm scale-95 active:opacity-80 transition-all"
-          >
-            Analyze Resume
-          </Link>
-        </div>
-      </header>
+      <TopNavBar />
 
       <main className="flex-grow hero-gradient relative">
         <div className="max-w-6xl mx-auto px-6 py-12">
