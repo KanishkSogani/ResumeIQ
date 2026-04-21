@@ -132,6 +132,33 @@ export default function DashboardPage() {
     });
   }, [report]);
 
+  const atsBand = useMemo(() => {
+    if (atsScore >= 85) {
+      return {
+        label: "Top Tier",
+        narrative:
+          "Resume structure and keyword framing are strongly aligned with ATS screening patterns.",
+        color: "text-[#9cd0ff]",
+      };
+    }
+
+    if (atsScore >= 70) {
+      return {
+        label: "Competitive",
+        narrative:
+          "Core resume structure is solid, with room to improve targeting and keyword precision.",
+        color: "text-[#adc6ff]",
+      };
+    }
+
+    return {
+      label: "Needs Optimization",
+      narrative:
+        "Resume should be refined for stronger structure consistency and ATS keyword relevance.",
+      color: "text-[#ffb786]",
+    };
+  }, [atsScore]);
+
   const handleStartJobMatch = () => {
     const normalizedJdText = normalizeInputToString(jobDescriptionInput);
 
@@ -201,7 +228,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="md:col-span-4 bg-[#131b2e] p-8 rounded-2xl flex flex-col justify-between overflow-hidden relative group border border-[#424754]/10"
+            className="md:col-span-4 bg-[#131b2e] p-8 rounded-2xl flex flex-col gap-8 overflow-hidden relative group border border-[#424754]/10"
           >
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#adc6ff]/5 rounded-full blur-3xl group-hover:bg-[#adc6ff]/10 transition-all duration-700"></div>
             <div>
@@ -259,6 +286,30 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            <div className="space-y-4 relative z-10">
+              <div className="bg-[#171f33] rounded-xl border border-[#424754]/20 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c909f]">
+                    Readiness Band
+                  </span>
+                  <span
+                    className={`text-xs font-black uppercase tracking-[0.15em] ${atsBand.color}`}
+                  >
+                    {atsBand.label}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-[#222a3d] rounded-full overflow-hidden mb-3">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#adc6ff] to-[#4d8eff]"
+                    style={{ width: `${Math.max(6, atsScore)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-[#c2c6d6] leading-relaxed opacity-85">
+                  {atsBand.narrative}
+                </p>
+              </div>
+            </div>
           </motion.div>
 
           {/* Predicted Role & Model Predictions */}
@@ -296,7 +347,7 @@ export default function DashboardPage() {
               <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#8c909f] mb-8">
                 Model Inference Metrics
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
                 {modelStats.map((stat, idx) => (
                   <motion.div
                     key={`${stat.name}-${idx}`}
