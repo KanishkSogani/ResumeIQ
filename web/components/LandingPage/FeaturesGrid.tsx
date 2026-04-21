@@ -89,8 +89,8 @@ export function FeaturesGrid() {
             <h3 className="text-3xl font-bold mb-4">Architecture Comparison</h3>
             <p className="text-[#c2c6d6] text-lg leading-relaxed">
               Cross-validate results using a multi-layered ensemble of NLP
-              architectures. We compare performance across TF-IDF, Word2Vec,
-              CNN, and BERT models.
+              architectures. We compare performance across TF-IDF, Doc2Vec, CNN,
+              and BERT models.
             </p>
           </div>
           <div className="flex-shrink-0 w-full md:w-1/3 flex flex-col gap-3">
@@ -103,7 +103,7 @@ export function FeaturesGrid() {
               <CheckCircle2 className="text-[#adc6ff] w-5 h-5" />
             </div>
             <div className="bg-[#222a3d] p-4 rounded-lg flex items-center justify-between opacity-50 group-hover:opacity-100 transition-opacity">
-              <span className="font-bold text-sm">TF-IDF / Word2Vec</span>
+              <span className="font-bold text-sm">TF-IDF / Doc2Vec</span>
               <CheckCircle2 className="text-[#adc6ff] w-5 h-5" />
             </div>
           </div>

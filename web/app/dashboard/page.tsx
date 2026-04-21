@@ -31,10 +31,34 @@ type ReportData = {
 };
 
 const FALLBACK_MODEL_STATS = [
-  { name: "TF-IDF", value: "92.4%", latency: "12ms", icon: BarChart3 },
-  { name: "CNN", value: "88.1%", latency: "45ms", icon: LayoutGrid },
-  { name: "SBERT", value: "94.7%", latency: "82ms", icon: BrainCircuit },
-  { name: "BERT", value: "91.2%", latency: "115ms", icon: Cpu },
+  {
+    name: "TF-IDF",
+    value: "92.4%",
+    latency: "12ms",
+    icon: BarChart3,
+    isSelected: false,
+  },
+  {
+    name: "CNN",
+    value: "88.1%",
+    latency: "45ms",
+    icon: LayoutGrid,
+    isSelected: false,
+  },
+  {
+    name: "SBERT",
+    value: "94.7%",
+    latency: "82ms",
+    icon: BrainCircuit,
+    isSelected: false,
+  },
+  {
+    name: "BERT",
+    value: "91.2%",
+    latency: "115ms",
+    icon: Cpu,
+    isSelected: false,
+  },
 ];
 
 const MODEL_ICON_MAP = {
@@ -43,6 +67,14 @@ const MODEL_ICON_MAP = {
   cnn: LayoutGrid,
   sbert: BrainCircuit,
   doc2vec: Brain,
+};
+
+const ENGINE_TO_MODEL_NAME: Record<string, string> = {
+  tfidf: "TF-IDF",
+  doc2vec: "Doc2Vec",
+  cnn: "CNN",
+  sbert: "SBERT",
+  bert: "BERT",
 };
 
 const normalizeInputToString = (input: unknown): string => {
@@ -60,6 +92,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reportId = searchParams.get("reportId");
+  const selectedEngineId =
+    searchParams.get("model")?.trim().toLowerCase() || "";
 
   const [report, setReport] = useState<ReportData | null>(null);
   const [jobDescriptionInput, setJobDescriptionInput] = useState("");
@@ -118,6 +152,20 @@ export default function DashboardPage() {
     return [...report.models].sort((a, b) => b.confidence - a.confidence)[0];
   }, [report]);
 
+  const selectedModelName = ENGINE_TO_MODEL_NAME[selectedEngineId] || null;
+
+  const selectedModelResult = useMemo(() => {
+    if (!selectedModelName || !report?.models?.length) return null;
+
+    return (
+      report.models.find(
+        (model) => model.name.toLowerCase() === selectedModelName.toLowerCase(),
+      ) || null
+    );
+  }, [report, selectedModelName]);
+
+  const primaryModel = selectedModelResult || topModel;
+
   const modelStats = useMemo(() => {
     if (!report?.models?.length) return FALLBACK_MODEL_STATS;
 
@@ -128,9 +176,12 @@ export default function DashboardPage() {
         value: `${Math.round(model.confidence * 100)}%`,
         latency: `${Math.round(model.latency_ms)}ms`,
         icon: MODEL_ICON_MAP[iconKey] ?? Brain,
+        isSelected:
+          Boolean(selectedModelName) &&
+          model.name.toLowerCase() === selectedModelName.toLowerCase(),
       };
     });
-  }, [report]);
+  }, [report, selectedModelName]);
 
   const atsBand = useMemo(() => {
     if (atsScore >= 85) {
@@ -326,10 +377,12 @@ export default function DashboardPage() {
               </div>
               <div className="relative z-10">
                 <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#adc6ff] mb-2">
-                  Primary Classification
+                  {selectedModelResult
+                    ? `Primary Classification (${selectedModelResult.name})`
+                    : "Primary Classification"}
                 </h3>
                 <div className="text-4xl font-black text-[#dae2fd] tracking-tighter">
-                  {topModel?.prediction || "Awaiting classification"}
+                  {primaryModel?.prediction || "Awaiting classification"}
                 </div>
               </div>
               <div className="hidden sm:block relative z-10">
@@ -352,12 +405,23 @@ export default function DashboardPage() {
                   <motion.div
                     key={`${stat.name}-${idx}`}
                     whileHover={{ y: -4 }}
-                    className="bg-[#222a3d] p-5 rounded-xl border border-[#424754]/10 hover:border-[#adc6ff]/20 transition-all shadow-sm"
+                    className={`bg-[#222a3d] p-5 rounded-xl border transition-all shadow-sm ${
+                      stat.isSelected
+                        ? "border-[#adc6ff]/60 shadow-[0_0_0_1px_rgba(173,198,255,0.2)]"
+                        : "border-[#424754]/10 hover:border-[#adc6ff]/20"
+                    }`}
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <span className="text-[10px] font-bold text-[#8c909f] tracking-widest uppercase">
-                        {stat.name}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-[#8c909f] tracking-widest uppercase">
+                          {stat.name}
+                        </span>
+                        {stat.isSelected && (
+                          <span className="text-[9px] font-black text-[#adc6ff] tracking-widest uppercase">
+                            Selected On Upload
+                          </span>
+                        )}
+                      </div>
                       <stat.icon className="text-[#adc6ff] w-4 h-4" />
                     </div>
                     <div className="text-2xl font-black text-[#dae2fd] tracking-tight">

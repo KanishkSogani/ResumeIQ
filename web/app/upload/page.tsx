@@ -34,8 +34,8 @@ const ENGINES = [
     color: "text-[#adc6ff]",
   },
   {
-    id: "word2vec",
-    name: "Word2Vec / Doc2Vec",
+    id: "doc2vec",
+    name: "Doc2Vec",
     icon: Globe,
     color: "text-[#c2c6d6]",
   },
@@ -147,7 +147,7 @@ export default function UploadPage() {
       }
 
       router.push(
-        `/dashboard?reportId=${encodeURIComponent(report.report_id)}`,
+        `/dashboard?reportId=${encodeURIComponent(report.report_id)}&model=${encodeURIComponent(selectedEngine)}`,
       );
     } catch (error) {
       setUploadError(
@@ -345,7 +345,7 @@ export default function UploadPage() {
                 type="button"
                 onClick={handleAnalyzeResume}
                 disabled={isSubmitting}
-                className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                className="w-full md:w-auto primary-gradient text-[#00285d] px-12 py-5 rounded-xl font-black text-lg tracking-tight shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Analyzing..." : "Analyze Resume"}
                 <Sparkles className="w-6 h-6" />
