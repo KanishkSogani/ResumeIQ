@@ -259,10 +259,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <p className="text-sm text-[#8c909f] leading-relaxed mt-12 italic opacity-80">
-              "Your resume structural integrity is in the 94th percentile of
-              processed candidates in the tech sector."
-            </p>
           </motion.div>
 
           {/* Predicted Role & Model Predictions */}

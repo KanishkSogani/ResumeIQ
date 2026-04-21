@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Sparkles,
   TrendingUp,
-  Download,
   Wand2,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -28,6 +27,34 @@ type FeedbackResult = {
   result?: unknown;
 };
 
+type FeedbackKey =
+  | "strengths"
+  | "weaknesses"
+  | "missing_skills_analysis"
+  | "improvements"
+  | "project_suggestions"
+  | "ats_improvements";
+
+type StructuredFeedback = Record<FeedbackKey, string[]>;
+
+const FEEDBACK_KEYS: FeedbackKey[] = [
+  "strengths",
+  "weaknesses",
+  "missing_skills_analysis",
+  "improvements",
+  "project_suggestions",
+  "ats_improvements",
+];
+
+const FEEDBACK_LABELS: Record<FeedbackKey, string> = {
+  strengths: "Strengths",
+  weaknesses: "Weaknesses",
+  missing_skills_analysis: "Missing Skills Analysis",
+  improvements: "Improvements",
+  project_suggestions: "Project Suggestions",
+  ats_improvements: "ATS Improvements",
+};
+
 const normalizeInputToString = (input: unknown): string => {
   if (typeof input === "string") return input;
   if (input === null || input === undefined) return "";
@@ -39,22 +66,106 @@ const normalizeInputToString = (input: unknown): string => {
   }
 };
 
-const normalizeFeedbackToString = (
+const createEmptyStructuredFeedback = (): StructuredFeedback => ({
+  strengths: [],
+  weaknesses: [],
+  missing_skills_analysis: [],
+  improvements: [],
+  project_suggestions: [],
+  ats_improvements: [],
+});
+
+const parsePossiblyJson = (input: string): unknown => {
+  const cleaned = input
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return input;
+  }
+};
+
+const toStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normalizeInputToString(item).trim())
+      .filter(Boolean);
+  }
+
+  const text = normalizeInputToString(value).trim();
+  if (!text) return [];
+
+  return text
+    .split(/\n+|\s*•\s*|\s*-\s*/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
+const structuredFeedbackFromUnknown = (
+  value: unknown,
+): StructuredFeedback | null => {
+  if (!value || typeof value !== "object") return null;
+
+  const obj = value as Record<string, unknown>;
+  const parsed = createEmptyStructuredFeedback();
+
+  FEEDBACK_KEYS.forEach((key) => {
+    parsed[key] = toStringArray(obj[key]);
+  });
+
+  const hasData = FEEDBACK_KEYS.some((key) => parsed[key].length > 0);
+  return hasData ? parsed : null;
+};
+
+const normalizeFeedback = (
   payload: FeedbackResult | unknown,
-): string => {
-  if (typeof payload === "string") return payload;
+): { structured: StructuredFeedback | null; text: string | null } => {
+  const candidates: unknown[] =
+    payload && typeof payload === "object"
+      ? [
+          (payload as FeedbackResult).feedback,
+          (payload as FeedbackResult).message,
+          (payload as FeedbackResult).result,
+          payload,
+        ]
+      : [payload];
 
-  if (payload && typeof payload === "object") {
-    const data = payload as FeedbackResult;
-    const candidates = [data.feedback, data.message, data.result];
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) continue;
 
-    for (const candidate of candidates) {
-      const normalized = normalizeInputToString(candidate).trim();
-      if (normalized) return normalized;
+    if (typeof candidate === "string") {
+      const parsedCandidate = parsePossiblyJson(candidate);
+      const structuredFromString =
+        structuredFeedbackFromUnknown(parsedCandidate);
+      if (structuredFromString) {
+        return { structured: structuredFromString, text: null };
+      }
+
+      const normalizedText = normalizeInputToString(parsedCandidate).trim();
+      if (normalizedText) {
+        return { structured: null, text: normalizedText };
+      }
+
+      continue;
+    }
+
+    const structuredFromObject = structuredFeedbackFromUnknown(candidate);
+    if (structuredFromObject) {
+      return { structured: structuredFromObject, text: null };
+    }
+
+    const normalized = normalizeInputToString(candidate).trim();
+    if (normalized) {
+      return { structured: null, text: normalized };
     }
   }
 
-  return normalizeInputToString(payload).trim();
+  return { structured: null, text: null };
 };
 
 export default function JobMatchingPage() {
@@ -63,10 +174,13 @@ export default function JobMatchingPage() {
 
   const [jdText, setJdText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackText, setFeedbackText] = useState<string | null>(null);
+  const [structuredFeedback, setStructuredFeedback] =
+    useState<StructuredFeedback | null>(null);
   const hasAutoAnalyzed = useRef(false);
 
   useEffect(() => {
@@ -99,12 +213,24 @@ export default function JobMatchingPage() {
   }, [matchResult]);
 
   const feedbackParagraphs = useMemo(() => {
-    if (!feedback) return [];
-    return feedback
+    if (!feedbackText) return [];
+    return feedbackText
       .split(/\n\n+/)
       .map((part) => part.trim())
       .filter(Boolean);
-  }, [feedback]);
+  }, [feedbackText]);
+
+  const feedbackSections = useMemo(() => {
+    if (!structuredFeedback) return [];
+
+    return FEEDBACK_KEYS.filter(
+      (key) => structuredFeedback[key].length > 0,
+    ).map((key) => ({
+      key,
+      title: FEEDBACK_LABELS[key],
+      items: structuredFeedback[key],
+    }));
+  }, [structuredFeedback]);
 
   const handleAnalyze = async () => {
     const normalizedJdText = normalizeInputToString(jdText);
@@ -150,6 +276,7 @@ export default function JobMatchingPage() {
 
       const matchData: MatchResult = await matchResponse.json();
       setMatchResult(matchData);
+      setIsFeedbackLoading(true);
 
       const feedbackResponse = await fetch(`${API_BASE_URL}/ai/feedback`, {
         method: "POST",
@@ -166,10 +293,12 @@ export default function JobMatchingPage() {
 
       if (feedbackResponse.ok) {
         const feedbackData: FeedbackResult = await feedbackResponse.json();
-        const normalizedFeedback = normalizeFeedbackToString(feedbackData);
-        setFeedback(normalizedFeedback || null);
+        const normalizedFeedback = normalizeFeedback(feedbackData);
+        setStructuredFeedback(normalizedFeedback.structured);
+        setFeedbackText(normalizedFeedback.text);
       } else {
-        setFeedback(null);
+        setStructuredFeedback(null);
+        setFeedbackText(null);
       }
     } catch (analysisError) {
       setError(
@@ -178,6 +307,7 @@ export default function JobMatchingPage() {
           : "Unable to run job matching.",
       );
     } finally {
+      setIsFeedbackLoading(false);
       setIsSubmitting(false);
     }
   };
@@ -218,11 +348,6 @@ export default function JobMatchingPage() {
             <p className="mt-3 text-[#c2c6d6] text-sm opacity-80">
               Resume ID: {resumeId || "Unavailable"}
             </p>
-          </div>
-          <div className="flex gap-4">
-            <button className="bg-[#222a3d] text-[#adc6ff] px-6 py-3 rounded-lg font-bold flex items-center gap-2 border border-[#424754]/30 cursor-not-allowed opacity-60">
-              <Download className="w-5 h-5" /> Export PDF
-            </button>
           </div>
         </header>
 
@@ -435,6 +560,45 @@ export default function JobMatchingPage() {
                 </h3>
               </div>
               <div className="space-y-4">
+                {isFeedbackLoading && (
+                  <div className="space-y-4 animate-pulse" aria-live="polite">
+                    <div className="space-y-2">
+                      <div className="h-3 w-40 rounded bg-[#2b3550]" />
+                      <div className="space-y-2 pl-3 border-l border-[#adc6ff]/20">
+                        <div className="h-3 w-full rounded bg-[#24304a]" />
+                        <div className="h-3 w-11/12 rounded bg-[#24304a]" />
+                        <div className="h-3 w-10/12 rounded bg-[#24304a]" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 w-48 rounded bg-[#2b3550]" />
+                      <div className="space-y-2 pl-3 border-l border-[#adc6ff]/20">
+                        <div className="h-3 w-full rounded bg-[#24304a]" />
+                        <div className="h-3 w-9/12 rounded bg-[#24304a]" />
+                      </div>
+                    </div>
+                    <p className="text-[#8c909f] text-xs tracking-wide uppercase">
+                      Fetching AI narrative feedback...
+                    </p>
+                  </div>
+                )}
+                {feedbackSections.map((section) => (
+                  <div key={section.key} className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#adc6ff]">
+                      {section.title}
+                    </h4>
+                    <ul className="space-y-2">
+                      {section.items.map((item, itemIndex) => (
+                        <li
+                          key={`${section.key}-${itemIndex}`}
+                          className="text-[#c2c6d6] text-sm leading-relaxed opacity-90 pl-3 border-l border-[#adc6ff]/30"
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
                 {feedbackParagraphs.map((paragraph, idx) => (
                   <p
                     key={idx}
@@ -443,11 +607,13 @@ export default function JobMatchingPage() {
                     {paragraph}
                   </p>
                 ))}
-                {!feedbackParagraphs.length && (
-                  <p className="text-[#8c909f] text-sm">
-                    Run analysis to fetch AI feedback from backend.
-                  </p>
-                )}
+                {!isFeedbackLoading &&
+                  !feedbackSections.length &&
+                  !feedbackParagraphs.length && (
+                    <p className="text-[#8c909f] text-sm">
+                      Run analysis to fetch AI feedback from backend.
+                    </p>
+                  )}
               </div>
             </motion.div>
           </div>
