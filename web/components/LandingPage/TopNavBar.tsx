@@ -6,9 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
   { label: "Upload", href: "/upload" },
-  { label: "Job Matching", href: "/job-matching" },
   { label: "History", href: "/history" },
-  { label: "Compare", href: "/compare" },
 ];
 
 export function TopNavBar() {

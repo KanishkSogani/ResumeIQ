@@ -6,7 +6,6 @@ import {
   Search,
   FileText,
   Briefcase,
-  Check,
   ArrowRightCircle,
   Columns2,
 } from "lucide-react";
@@ -63,7 +62,6 @@ export default function HistoryPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -109,10 +107,6 @@ export default function HistoryPage() {
     fetchHistory();
   }, []);
 
-  const toggleSelection = (id: string) => {
-    setSelectedId((prev) => (prev === id ? null : id));
-  };
-
   const filteredHistory = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     if (!normalizedQuery) return reports;
@@ -127,8 +121,6 @@ export default function HistoryPage() {
       return fileNameMatch || roleMatch;
     });
   }, [reports, searchQuery]);
-
-  const canRunComparison = Boolean(selectedId);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b1326]">
@@ -159,8 +151,8 @@ export default function HistoryPage() {
               transition={{ delay: 0.2 }}
               className="text-[#c2c6d6] text-lg leading-relaxed opacity-80"
             >
-              Access your previous analysis sessions and track your career
-              growth metrics through editorial-grade insights.
+              Pick any resume to inspect model-level comparison for that
+              specific resume and review how each model performed.
             </motion.p>
           </div>
           <div className="w-full md:w-96">
@@ -172,7 +164,7 @@ export default function HistoryPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-[#131b2e] border-none border-b-2 border-transparent focus:border-[#adc6ff] transition-all duration-300 py-4 pl-12 pr-4 rounded-t-lg text-[#dae2fd] focus:ring-0 placeholder:text-[#8c909f]/50"
-                placeholder="Search resumes..."
+                placeholder="Search by resume name or predicted role..."
                 type="text"
               />
             </div>
@@ -247,21 +239,14 @@ export default function HistoryPage() {
                         ATS Score
                       </span>
                     </div>
-                    <div className="flex items-center space-x-6 border-l border-[#424754]/20 pl-6">
-                      <label className="flex items-center cursor-pointer group/check">
-                        <input
-                          type="checkbox"
-                          className="hidden peer"
-                          checked={selectedId === item.report_id}
-                          onChange={() => toggleSelection(item.report_id)}
-                        />
-                        <div className="w-5 h-5 border-2 border-[#424754] rounded flex items-center justify-center peer-checked:bg-[#adc6ff] peer-checked:border-[#adc6ff] transition-all">
-                          <Check className="w-3.5 h-3.5 text-[#00285d] hidden peer-checked:block stroke-[4]" />
-                        </div>
-                        <span className="ml-2 text-sm text-[#c2c6d6] group-hover/check:text-[#dae2fd] transition-colors whitespace-nowrap">
-                          Compare
-                        </span>
-                      </label>
+                    <div className="flex items-center space-x-3 border-l border-[#424754]/20 pl-6">
+                      <Link
+                        href={`/compare?reportIds=${encodeURIComponent(item.report_id)}`}
+                        className="primary-gradient text-[#00285d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:scale-[1.02] transition-transform whitespace-nowrap text-xs uppercase tracking-wide"
+                      >
+                        Model Comparison
+                        <Columns2 className="w-4 h-4" />
+                      </Link>
                       <Link
                         href={`/dashboard?reportId=${encodeURIComponent(item.report_id)}`}
                         className="text-[#adc6ff] font-bold flex items-center hover:translate-x-1 transition-transform whitespace-nowrap text-sm"
@@ -276,49 +261,6 @@ export default function HistoryPage() {
             ))}
           </AnimatePresence>
         </div>
-
-        {/* Comparison Float */}
-        <AnimatePresence>
-          {selectedId && (
-            <motion.div
-              initial={{ y: 100, x: "-50%", opacity: 0 }}
-              animate={{ y: 0, x: "-50%", opacity: 1 }}
-              exit={{ y: 100, x: "-50%", opacity: 0 }}
-              className="fixed bottom-12 left-1/2 z-40 w-full max-w-xl px-4"
-            >
-              <div className="bg-[#171f33]/90 backdrop-blur-xl rounded-full p-2 pl-8 flex items-center justify-between shadow-2xl border border-[#adc6ff]/20">
-                <div className="flex items-center">
-                  <div className="mr-4">
-                    <div className="w-10 h-10 rounded-full border-2 border-[#0b1326] bg-[#222a3d] flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-[#adc6ff]" />
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-[#dae2fd]">
-                    1 Resume selected for model comparison
-                  </span>
-                </div>
-                {canRunComparison ? (
-                  <Link
-                    href={`/compare?reportIds=${encodeURIComponent(selectedId)}`}
-                    className="primary-gradient text-[#00285d] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
-                  >
-                    View Comparison
-                    <Columns2 className="w-4 h-4" />
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="primary-gradient text-[#00285d] px-6 py-3 rounded-full font-bold flex items-center gap-2 opacity-70 cursor-not-allowed"
-                  >
-                    Select a Resume
-                    <Columns2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </main>
 
       {/* Footer */}
